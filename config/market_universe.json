@@ -9,26 +9,76 @@
   "benchmarks": [
     {"id":"SPY","type":"etf","name":"SPDR S&P 500 ETF Trust","role":"S&P 500 ETF proxy"},
     {"id":"QQQ","type":"etf","name":"Invesco QQQ Trust","role":"Nasdaq-100 ETF proxy"},
-    {"id":"DIA","type":"etf","name":"SPDR Dow Jones Industrial Average ETF Trust","role":"Dow ETF proxy"}
+    {"id":"DIA","type":"etf","name":"SPDR Dow Jones Industrial Average ETF Trust","role":"Dow Jones Industrial Average ETF proxy"}
   ],
   "major_indices": [
     {"id":"SP500","type":"index","name":"S&P 500 Index","provider_symbol_hint":"^GSPC"},
-    {"id":"DJIA","type":"index","name":"Dow Jones Industrial Average","provider_symbol_hint":"^DJI"},
-    {"id":"NASDAQ_COMPOSITE","type":"index","name":"Nasdaq Composite Index","provider_symbol_hint":"^IXIC"}
+    {"id":"NDX","type":"index","name":"Nasdaq-100 Index","provider_symbol_hint":"^NDX"},
+    {"id":"NASDAQ_COMPOSITE","type":"index","name":"Nasdaq Composite Index","provider_symbol_hint":"^IXIC"},
+    {"id":"DJIA","type":"index","name":"Dow Jones Industrial Average","provider_symbol_hint":"^DJI"}
   ],
-  "sector_etfs": [
-    {"id":"XLB","sector":"Materials","name":"Materials Select Sector SPDR Fund"},
-    {"id":"XLC","sector":"Communication Services","name":"Communication Services Select Sector SPDR Fund"},
-    {"id":"XLE","sector":"Energy","name":"Energy Select Sector SPDR Fund"},
-    {"id":"XLF","sector":"Financials","name":"Financial Select Sector SPDR Fund"},
-    {"id":"XLI","sector":"Industrials","name":"Industrial Select Sector SPDR Fund"},
-    {"id":"XLK","sector":"Information Technology","name":"Technology Select Sector SPDR Fund"},
-    {"id":"XLP","sector":"Consumer Staples","name":"Consumer Staples Select Sector SPDR Fund"},
-    {"id":"XLRE","sector":"Real Estate","name":"Real Estate Select Sector SPDR Fund"},
-    {"id":"XLU","sector":"Utilities","name":"Utilities Select Sector SPDR Fund"},
-    {"id":"XLV","sector":"Health Care","name":"Health Care Select Sector SPDR Fund"},
-    {"id":"XLY","sector":"Consumer Discretionary","name":"Consumer Discretionary Select Sector SPDR Fund"}
-  ],
+  "sector_systems": {
+    "sp500_select_sector_etfs": {
+      "basis":"S&P 500 / GICS first-level sectors",
+      "kind":"ETF",
+      "instruments":[
+        {"id":"XLB","sector":"Materials","name":"Materials Select Sector SPDR Fund"},
+        {"id":"XLC","sector":"Communication Services","name":"Communication Services Select Sector SPDR Fund"},
+        {"id":"XLE","sector":"Energy","name":"Energy Select Sector SPDR Fund"},
+        {"id":"XLF","sector":"Financials","name":"Financial Select Sector SPDR Fund"},
+        {"id":"XLI","sector":"Industrials","name":"Industrial Select Sector SPDR Fund"},
+        {"id":"XLK","sector":"Information Technology","name":"Technology Select Sector SPDR Fund"},
+        {"id":"XLP","sector":"Consumer Staples","name":"Consumer Staples Select Sector SPDR Fund"},
+        {"id":"XLRE","sector":"Real Estate","name":"Real Estate Select Sector SPDR Fund"},
+        {"id":"XLU","sector":"Utilities","name":"Utilities Select Sector SPDR Fund"},
+        {"id":"XLV","sector":"Health Care","name":"Health Care Select Sector SPDR Fund"},
+        {"id":"XLY","sector":"Consumer Discretionary","name":"Consumer Discretionary Select Sector SPDR Fund"}
+      ]
+    },
+    "nasdaq100_industry_system": {
+      "basis":"Nasdaq-100 / Nasdaq industry breakdown",
+      "kind":"INDEX_SECTOR_BREAKDOWN_WITH_VERIFIED_TRACKERS_WHERE_AVAILABLE",
+      "financials_excluded":true,
+      "current_categories":[
+        "Basic Materials",
+        "Consumer Discretionary",
+        "Consumer Staples",
+        "Health Care",
+        "Industrials",
+        "Technology",
+        "Telecommunications",
+        "Utilities"
+      ],
+      "verified_sector_indices":[
+        {"id":"NDXT","sector":"Technology","name":"Nasdaq-100 Technology Sector Index","weighting":"equal_weight"}
+      ],
+      "verified_etf_proxies":[
+        {"id":"QTEC","sector":"Technology","name":"First Trust NASDAQ-100-Technology Sector Index Fund","tracks":"NDXT"}
+      ],
+      "note":"Do not fabricate a full 11-ETF Nasdaq family. Add sector indices or ETFs only after the exact official mapping is verified."
+    },
+    "dow_jones_us_sector_system": {
+      "basis":"Dow Jones U.S. Sector and Industry Indices / proprietary Dow Jones sector classification",
+      "kind":"INDEX_SECTOR_FAMILY",
+      "categories":[
+        "Technology",
+        "Financials",
+        "Industrials",
+        "Consumer Services",
+        "Health Care",
+        "Consumer Goods",
+        "Oil & Gas",
+        "Utilities",
+        "Basic Materials",
+        "Telecommunications"
+      ],
+      "verified_examples":[
+        {"id":"DJUSTC","sector":"Technology","name":"Dow Jones U.S. Technology Index"},
+        {"id":"DJUSFN","sector":"Financials","name":"Dow Jones U.S. Financials Index"}
+      ],
+      "note":"This is not a decomposition of the 30-stock DJIA itself. It is the broader Dow Jones U.S. sector index family. Use the official Dow Jones sector index series for sector views."
+    }
+  },
   "website_detail_fields": {
     "core_market_data": ["date","open","high","low","close","adjusted_close","volume"],
     "derived": ["return_1d","return_5d","return_20d","volatility_20d","drawdown_from_peak","relative_to_spy_20d","range_box_state"],
@@ -38,7 +88,9 @@
   "notes": [
     "The website market-data universe is intentionally not an all-stock universe.",
     "No delisted-stock dataset is required for this website scope.",
-    "QQQ tracks Nasdaq-100; Nasdaq Composite is kept separately as one of the three broad headline indices.",
+    "QQQ tracks Nasdaq-100; Nasdaq Composite is a separate broad Nasdaq market index.",
+    "Nasdaq-100 excludes financial companies, so its sector system is not equivalent to the S&P 500 11-sector ETF family.",
+    "Dow Jones sector views should use the broader Dow Jones U.S. Sector Index family, not pretend the 30-stock DJIA has a complete sector ETF family.",
     "Provider-specific symbols are adapter details and must not redefine the canonical instrument IDs above."
   ]
 }
