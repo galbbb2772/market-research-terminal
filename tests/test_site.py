@@ -6,7 +6,8 @@ from tools.stage_data import validate
 
 class StaticSiteTests(unittest.TestCase):
     def test_sites_present_and_have_honest_status(self):
-        for file in ('index.html','research-hub.html','structure-lab.html','cycle-lab.html','api-status.html','sector-map.html','instrument.html'):
+        pages=('index.html','research-hub.html','structure-lab.html','cycle-lab.html','api-status.html','sector-map.html','instrument.html','news-archive.html')
+        for file in pages:
             s=(ROOT/'docs'/file).read_text(encoding='utf-8')
             self.assertIn('<html',s)
             self.assertIn('</body>',s)
@@ -15,7 +16,7 @@ class StaticSiteTests(unittest.TestCase):
         self.assertFalse((ROOT/'docs/data/structure_lab.json').exists(),'Repo must not ship unapproved structure history.')
 
     def test_static_links_and_assets(self):
-        for file in ('research-hub.html','structure-lab.html','cycle-lab.html','api-status.html','sector-map.html','instrument.html'):
+        for file in ('index.html','research-hub.html','structure-lab.html','cycle-lab.html','api-status.html','sector-map.html','instrument.html','news-archive.html'):
             s=(ROOT/'docs'/file).read_text(encoding='utf-8')
             for target in re.findall(r'(?:(?:href|src)=)["\']([^"\']+)["\']',s):
                 if target.startswith(('http:','https:','#','data:')):continue
@@ -40,6 +41,13 @@ class StaticSiteTests(unittest.TestCase):
             x=json.loads((ROOT/'docs/data'/file).read_text(encoding='utf-8'))
             self.assertIn('$schema',x)
             self.assertIn('properties',x)
+
+    def test_new_pages_do_not_embed_fake_market_history(self):
+        for file in ('index.html','sector-map.html','instrument.html'):
+            text=(ROOT/'docs'/file).read_text(encoding='utf-8').lower()
+            self.assertNotIn('demo data',text)
+            self.assertNotIn('mock data',text)
+        self.assertFalse((ROOT/'docs/data/market_history.json').exists(),'Do not commit market history before display rights are approved.')
 
     def test_news_archive_is_original_real_short_archive(self):
         x=json.loads((ROOT/'docs/data/news_history.json').read_text(encoding='utf-8'))
