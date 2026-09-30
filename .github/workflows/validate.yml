@@ -14,9 +14,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Compile data connectors
-        run: python -m py_compile tools/fetch_public_sources.py tools/fetch_licensed_etfs.py tools/build_market_snapshot.py tools/stage_data.py
-      - name: Verify website, links and archived research status
+      - name: Compile website and data connectors
+        run: |
+          python -m py_compile tools/fetch_public_sources.py tools/stage_data.py \
+            tools/fetch_licensed_etfs.py tools/fetch_licensed_indices.py \
+            tools/merge_market_history.py tools/build_market_snapshot.py
+      - name: Verify website, offline adapters, licensing and historical snapshot calculations
         run: python -m unittest discover -s tests -v
       - name: Validate frontend JavaScript
         run: |
