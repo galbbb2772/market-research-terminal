@@ -1,0 +1,20 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Market History V1",
+  "type":"object",
+  "required":["schema","instruments"],
+  "properties":{
+    "schema":{"const":"MARKET-HISTORY-V1"},
+    "provider":{"type":["string","null"]},
+    "rights_status":{"enum":["verified_publishable","verified_internal_only","pending_review","not_connected"]},
+    "adjustment":{"type":["string","null"]},
+    "instruments":{"type":"object","additionalProperties":{"type":"object","required":["bars"],"properties":{
+      "name":{"type":["string","null"]},"provider_symbol":{"type":["string","null"]},"source_status":{"type":["string","null"]},
+      "start":{"type":["string","null"]},"end":{"type":["string","null"]},
+      "bars":{"type":"array","items":{"type":"array","minItems":5,"maxItems":7,"prefixItems":[
+        {"type":"string"},{"type":"number"},{"type":"number"},{"type":"number"},{"type":"number"},{"type":["number","null"]},{"type":["number","null"]}
+      ]}}
+    },"additionalProperties":true}}
+  },
+  "additionalProperties":true
+}
