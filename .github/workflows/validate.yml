@@ -1,0 +1,31 @@
+name: Validate independent research website
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify website, links and archived research status
+        run: python -m unittest discover -s tests -v
+      - name: Validate independent frontend JavaScript
+        run: |
+          node --check docs/research-terminal-v2.js
+          python - <<'PYCODE'
+          import re, subprocess
+          from pathlib import Path
+          for item in ('research-hub.html','structure-lab.html','cycle-lab.html'):
+              html=(Path('docs')/item).read_text(encoding='utf-8')
+              for text in re.findall(r'<script(?![^>]*src=)[^>]*>(.*?)</script>',html,re.S|re.I):
+                  if text.strip():
+                      subprocess.run(['node','--check','-'],input=text,text=True,check=True)
+              print('JS OK:',item)
+          PYCODE
