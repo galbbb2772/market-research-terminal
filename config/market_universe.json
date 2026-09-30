@@ -1,0 +1,44 @@
+{
+  "scope": "ETF_AND_MAJOR_INDEX_ONLY",
+  "exclude": {
+    "individual_stocks": true,
+    "delisted_stocks": true,
+    "stock_constituent_history": true,
+    "strategy_backtests": true
+  },
+  "benchmarks": [
+    {"id":"SPY","type":"etf","name":"SPDR S&P 500 ETF Trust","role":"S&P 500 ETF proxy"},
+    {"id":"QQQ","type":"etf","name":"Invesco QQQ Trust","role":"Nasdaq-100 ETF proxy"},
+    {"id":"DIA","type":"etf","name":"SPDR Dow Jones Industrial Average ETF Trust","role":"Dow ETF proxy"}
+  ],
+  "major_indices": [
+    {"id":"SP500","type":"index","name":"S&P 500 Index","provider_symbol_hint":"^GSPC"},
+    {"id":"DJIA","type":"index","name":"Dow Jones Industrial Average","provider_symbol_hint":"^DJI"},
+    {"id":"NASDAQ_COMPOSITE","type":"index","name":"Nasdaq Composite Index","provider_symbol_hint":"^IXIC"}
+  ],
+  "sector_etfs": [
+    {"id":"XLB","sector":"Materials","name":"Materials Select Sector SPDR Fund"},
+    {"id":"XLC","sector":"Communication Services","name":"Communication Services Select Sector SPDR Fund"},
+    {"id":"XLE","sector":"Energy","name":"Energy Select Sector SPDR Fund"},
+    {"id":"XLF","sector":"Financials","name":"Financial Select Sector SPDR Fund"},
+    {"id":"XLI","sector":"Industrials","name":"Industrial Select Sector SPDR Fund"},
+    {"id":"XLK","sector":"Information Technology","name":"Technology Select Sector SPDR Fund"},
+    {"id":"XLP","sector":"Consumer Staples","name":"Consumer Staples Select Sector SPDR Fund"},
+    {"id":"XLRE","sector":"Real Estate","name":"Real Estate Select Sector SPDR Fund"},
+    {"id":"XLU","sector":"Utilities","name":"Utilities Select Sector SPDR Fund"},
+    {"id":"XLV","sector":"Health Care","name":"Health Care Select Sector SPDR Fund"},
+    {"id":"XLY","sector":"Consumer Discretionary","name":"Consumer Discretionary Select Sector SPDR Fund"}
+  ],
+  "website_detail_fields": {
+    "core_market_data": ["date","open","high","low","close","adjusted_close","volume"],
+    "derived": ["return_1d","return_5d","return_20d","volatility_20d","drawdown_from_peak","relative_to_spy_20d","range_box_state"],
+    "etf_metadata": ["fund_name","sector","issuer","expense_ratio","aum_if_licensed","holdings_count_if_licensed"],
+    "index_note": "Index feeds may not provide meaningful volume; do not synthesize it."
+  },
+  "notes": [
+    "The website market-data universe is intentionally not an all-stock universe.",
+    "No delisted-stock dataset is required for this website scope.",
+    "QQQ tracks Nasdaq-100; Nasdaq Composite is kept separately as one of the three broad headline indices.",
+    "Provider-specific symbols are adapter details and must not redefine the canonical instrument IDs above."
+  ]
+}
