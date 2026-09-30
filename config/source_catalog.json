@@ -1,0 +1,303 @@
+{
+  "schema_version": "1.0",
+  "updated": "2026-09-30",
+  "principles": {
+    "public_site": "Never expose API keys in browser JavaScript. Prefer GitHub Actions/server-side fetch and publish only data or derived outputs whose license permits public display.",
+    "raw_market_data": "Do not commit vendor raw market data to this public repository unless redistribution/display rights are explicitly confirmed.",
+    "point_in_time": "Store observation_date, release_date, retrieval_date and revision/vintage flags separately whenever the source supports them."
+  },
+  "sources": [
+    {
+      "id": "bls_public_api",
+      "category": "macro",
+      "provider": "U.S. Bureau of Labor Statistics",
+      "access": "REST JSON/XLSX",
+      "auth": "optional registration key for higher limits",
+      "public_display": "generally suitable with BLS citation/disclaimer requirements",
+      "status": "high_priority",
+      "uses": ["UNRATE", "CPI", "PPI", "payrolls", "wages", "labor participation"]
+    },
+    {
+      "id": "treasury_daily_rates",
+      "category": "rates_macro",
+      "provider": "U.S. Department of the Treasury",
+      "access": "official XML feed and CSV downloads",
+      "auth": "none",
+      "public_display": "official government source; preserve provenance and methodology",
+      "status": "high_priority",
+      "uses": ["yield curve", "3M/10Y", "bill rates", "real yields", "curve slope"]
+    },
+    {
+      "id": "bea_api",
+      "category": "macro",
+      "provider": "U.S. Bureau of Economic Analysis",
+      "access": "REST API",
+      "auth": "API key",
+      "public_display": "official government statistics; follow BEA terms/citation",
+      "status": "high_priority",
+      "uses": ["GDP", "PCE", "personal income", "corporate profits", "industry GDP"]
+    },
+    {
+      "id": "census_nrc_bps",
+      "category": "macro_housing",
+      "provider": "U.S. Census Bureau",
+      "access": "official downloads and Census APIs where available",
+      "auth": "usually none or optional Census key depending endpoint",
+      "public_display": "official government source; preserve series definitions",
+      "status": "high_priority",
+      "uses": ["building permits", "housing starts", "completions", "construction"]
+    },
+    {
+      "id": "sec_data_api",
+      "category": "fundamentals_filings",
+      "provider": "U.S. Securities and Exchange Commission",
+      "access": "data.sec.gov REST JSON + bulk ZIP",
+      "auth": "none; declared User-Agent required for automated use",
+      "cors": false,
+      "rate_guideline": "<=10 requests/second total",
+      "public_display": "official public filings; fetch server-side/GitHub Actions because CORS is not supported",
+      "status": "high_priority",
+      "uses": ["filing history", "10-K/10-Q/8-K events", "XBRL company facts", "CIK/ticker mapping"]
+    },
+    {
+      "id": "fed_g17",
+      "category": "macro",
+      "provider": "Federal Reserve Board G.17",
+      "access": "official text/CSV/XML downloads",
+      "auth": "none",
+      "public_display": "official source; revised history is not a vintage series",
+      "status": "already_prototyped",
+      "uses": ["industrial production", "capacity utilization"]
+    },
+    {
+      "id": "fed_sloos",
+      "category": "credit_conditions",
+      "provider": "Federal Reserve Board SLOOS",
+      "access": "CSV/XML via Data Download Program/release files",
+      "auth": "none",
+      "public_display": "official source; preserve quarterly survey/release dates",
+      "status": "high_priority",
+      "uses": ["bank lending standards", "loan demand", "credit tightening"]
+    },
+    {
+      "id": "fed_h15",
+      "category": "rates_macro",
+      "provider": "Federal Reserve Board H.15",
+      "access": "CSV/XML downloads",
+      "auth": "none",
+      "public_display": "official source; DDP is being streamlined/retired so prefer durable release/XML routes",
+      "status": "secondary",
+      "uses": ["selected interest rates", "Treasury constant maturities", "Fed funds"]
+    },
+    {
+      "id": "nyfed_reference_rates",
+      "category": "rates_liquidity",
+      "provider": "Federal Reserve Bank of New York",
+      "access": "Markets Data APIs / exports",
+      "auth": "none for public reference-rate endpoints",
+      "public_display": "official source; reference-rate terms/disclaimers apply",
+      "status": "high_priority",
+      "uses": ["SOFR", "EFFR", "OBFR", "TGCR", "BGCR", "repo volumes"]
+    },
+    {
+      "id": "nyfed_gscpi",
+      "category": "macro_supply_chain",
+      "provider": "Federal Reserve Bank of New York",
+      "access": "official downloadable dataset",
+      "auth": "none",
+      "public_display": "official source; preserve methodology/provenance",
+      "status": "high_priority",
+      "uses": ["global supply chain pressure"]
+    },
+    {
+      "id": "chicago_fed_nfci",
+      "category": "financial_conditions",
+      "provider": "Federal Reserve Bank of Chicago",
+      "access": "official weekly data download",
+      "auth": "none",
+      "public_display": "official source; treat observation week and release time separately",
+      "status": "high_priority",
+      "uses": ["NFCI", "ANFCI", "financial stress/conditions"]
+    },
+    {
+      "id": "fred_api",
+      "category": "macro_aggregator",
+      "provider": "Federal Reserve Bank of St. Louis FRED/ALFRED",
+      "access": "REST API",
+      "auth": "API key required",
+      "public_display": "series-level rights can differ; do not assume every third-party series can be redistributed",
+      "status": "secondary_fallback",
+      "uses": ["broad macro catalog", "release metadata", "vintage research via ALFRED where licensed"]
+    },
+    {
+      "id": "oecd_sdmx",
+      "category": "global_macro",
+      "provider": "OECD",
+      "access": "free SDMX REST API",
+      "auth": "none",
+      "public_display": "free subject to OECD terms; rate limits apply",
+      "status": "high_priority",
+      "uses": ["CLI", "GDP", "international cycle comparisons", "financial accounts"]
+    },
+    {
+      "id": "world_bank_api",
+      "category": "global_macro",
+      "provider": "World Bank",
+      "access": "Indicators API v2",
+      "auth": "none",
+      "public_display": "open API; retain source metadata",
+      "status": "secondary",
+      "uses": ["global macro", "development indicators", "long-history cross-country data"]
+    },
+    {
+      "id": "gdelt",
+      "category": "news_sentiment_events",
+      "provider": "GDELT Project",
+      "access": "DOC/GEO APIs plus downloadable event/GKG datasets",
+      "auth": "none",
+      "public_display": "datasets allow unrestricted academic/commercial/government use and redistribution with GDELT citation/link",
+      "status": "highest_priority_news",
+      "uses": ["news volume", "tone", "themes", "geopolitical events", "historical news tension"]
+    },
+    {
+      "id": "openfigi",
+      "category": "identifiers",
+      "provider": "OpenFIGI",
+      "access": "REST mapping/search/filter API",
+      "auth": "optional API key for higher limits",
+      "public_display": "identifier mapping service; review terms before bulk republishing metadata",
+      "status": "high_priority_utility",
+      "uses": ["ticker/FIGI mapping", "security identity normalization", "exchange mapping"]
+    },
+    {
+      "id": "massive_stocks",
+      "category": "market_data",
+      "provider": "Massive (formerly Polygon.io)",
+      "access": "REST/WebSocket/flat files",
+      "auth": "API key",
+      "free_or_individual": "Stocks Basic free: 5 calls/min, 2 years history, end-of-day, individual use",
+      "public_display": "NOT allowed on individual plans; customer-facing/public display requires Business/display rights",
+      "status": "excellent_data_but_license_blocked_for_public_site",
+      "uses": ["US stocks", "delisted tickers", "corporate actions", "news", "options", "indices", "FX", "crypto"]
+    },
+    {
+      "id": "twelve_data",
+      "category": "market_data",
+      "provider": "Twelve Data",
+      "access": "REST/WebSocket",
+      "auth": "API key",
+      "free_or_individual": "Basic free: 8 API credits/min and 800/day; US equities/ETFs, forex, crypto, reference data",
+      "public_display": "Basic is internal non-display; external display requires an appropriate business tier/license",
+      "status": "strong_candidate_after_display_license",
+      "uses": ["stocks", "ETFs", "forex", "crypto", "technical indicators", "press releases"]
+    },
+    {
+      "id": "marketstack",
+      "category": "market_data",
+      "provider": "marketstack",
+      "access": "REST API",
+      "auth": "API key",
+      "free_or_individual": "Free: 100 requests/month, 1 year EOD, non-commercial; Basic: 10k/month, 10 years and labeled commercial use",
+      "public_display": "pricing labels paid Basic commercial use, but raw public display/redistribution rights still require terms verification",
+      "status": "low_cost_candidate",
+      "uses": ["EOD prices", "splits/dividends", "indices", "bonds", "ETF holdings", "IEX intraday"]
+    },
+    {
+      "id": "alpha_vantage",
+      "category": "market_data_news",
+      "provider": "Alpha Vantage",
+      "access": "REST API",
+      "auth": "API key",
+      "free_or_individual": "standard free limit 25 requests/day; many endpoints free, realtime/delayed US market data premium",
+      "public_display": "license/redistribution must be verified before public use",
+      "status": "useful_secondary",
+      "uses": ["daily prices", "fundamentals", "technical indicators", "news sentiment", "earnings transcripts", "FX", "commodities"]
+    },
+    {
+      "id": "financial_modeling_prep",
+      "category": "fundamentals_market_data",
+      "provider": "Financial Modeling Prep",
+      "access": "REST API",
+      "auth": "API key",
+      "free_or_individual": "Basic individual plan lists 250 calls/day and 5 years history",
+      "public_display": "FMP states display/redistribution requires a specific Data Display and Licensing Agreement",
+      "status": "license_review_required",
+      "uses": ["financial statements", "ETF holdings", "13F", "earnings", "company profiles", "prices"]
+    },
+    {
+      "id": "tiingo",
+      "category": "market_data_news",
+      "provider": "Tiingo",
+      "access": "REST/WebSocket",
+      "auth": "API key",
+      "free_or_individual": "individual pricing starts around $30/month",
+      "public_display": "redistribution is separately licensed; individual/internal plans should not be assumed to cover a public website",
+      "status": "license_review_required",
+      "uses": ["EOD/intraday equities", "IEX", "crypto", "news"]
+    },
+    {
+      "id": "alpaca_market_data",
+      "category": "market_data",
+      "provider": "Alpaca",
+      "access": "REST/WebSocket",
+      "auth": "API key/secret",
+      "free_or_individual": "Basic free: IEX realtime equities, historical since 2016, 200 historical calls/min",
+      "public_display": "personal/non-professional data access does not imply redistribution; written consent/licensing needed for republication",
+      "status": "private_dev_only_unless_licensed",
+      "uses": ["stocks/ETFs", "options", "crypto"]
+    },
+    {
+      "id": "tradier",
+      "category": "market_data_options",
+      "provider": "Tradier",
+      "access": "REST/WebSocket",
+      "auth": "brokerage account token",
+      "free_or_individual": "realtime US equities/options for brokerage account holders; sandbox delayed",
+      "public_display": "not selected for public redistribution without explicit licensing review",
+      "status": "private_dev_candidate",
+      "uses": ["quotes", "daily/weekly/monthly history", "options chains", "greeks", "indices"]
+    },
+    {
+      "id": "intrinio",
+      "category": "market_data_fundamentals",
+      "provider": "Intrinio",
+      "access": "REST/feeds",
+      "auth": "API key",
+      "free_or_individual": "Individual about $150/month; free trial available",
+      "public_display": "Individual explicitly says no redistribution or display; commercial Startup plan includes display rights",
+      "status": "commercial_only_for_public_site",
+      "uses": ["US EOD", "fundamentals", "options", "tick data"]
+    },
+    {
+      "id": "eodhd",
+      "category": "market_data_fundamentals",
+      "provider": "EODHD",
+      "access": "REST API",
+      "auth": "API key",
+      "public_display": "personal and commercial rights are separated; public redistribution/display requires commercial terms review",
+      "status": "candidate",
+      "uses": ["global EOD", "intraday", "fundamentals", "calendar/news alternatives"]
+    },
+    {
+      "id": "nasdaq_data_link",
+      "category": "dataset_market_macro",
+      "provider": "Nasdaq Data Link",
+      "access": "REST/table/streaming APIs depending dataset",
+      "auth": "API key for many datasets",
+      "public_display": "license is dataset-specific",
+      "status": "dataset_by_dataset_candidate",
+      "uses": ["alternative datasets", "economic/market datasets", "specialized historical series"]
+    },
+    {
+      "id": "newsapi",
+      "category": "news",
+      "provider": "NewsAPI",
+      "access": "REST API",
+      "auth": "API key",
+      "free_or_individual": "Developer free: 100/day, articles delayed 24h, search up to one month",
+      "public_display": "free Developer plan is development/testing only and cannot be used in production",
+      "status": "not_for_current_public_site_free_tier",
+      "uses": ["headlines", "article search"]
+    }
+  ]
+}
