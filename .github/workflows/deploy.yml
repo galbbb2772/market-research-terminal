@@ -4,8 +4,12 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'tools/**'
+      - 'config/**'
       - 'tests/**'
       - '.github/workflows/deploy.yml'
+  schedule:
+    - cron: '17 14 * * *'
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,6 +29,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Fetch official public data
+        run: python tools/fetch_public_sources.py --require-min-ok 4
       - name: Validate website
         run: python -m unittest discover -s tests -v
       - name: Configure GitHub Pages
