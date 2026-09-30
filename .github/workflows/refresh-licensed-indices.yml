@@ -1,0 +1,39 @@
+name: Refresh licensed headline indices
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: licensed-market-history-write
+  cancel-in-progress: false
+jobs:
+  refresh:
+    if: ${{ vars.MASSIVE_INDEX_PUBLIC_DISPLAY_APPROVED == 'true' && vars.MASSIVE_INDEX_LICENSE_REFERENCE != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -v
+      - name: Read approved index history
+        env:
+          MASSIVE_API_KEY: ${{ secrets.MASSIVE_API_KEY }}
+          MASSIVE_INDEX_PUBLIC_DISPLAY_APPROVED: ${{ vars.MASSIVE_INDEX_PUBLIC_DISPLAY_APPROVED }}
+          MASSIVE_INDEX_LICENSE_REFERENCE: ${{ vars.MASSIVE_INDEX_LICENSE_REFERENCE }}
+        run: |
+          set -euo pipefail
+          python tools/fetch_licensed_indices.py --output docs/data/market_index_staging.json --publish
+          if [ -f docs/data/market_history.json ]; then
+            python tools/merge_market_history.py --base docs/data/market_history.json --overlay docs/data/market_index_staging.json --output docs/data/market_history.json --publish
+          else
+            python tools/merge_market_history.py --overlay docs/data/market_index_staging.json --output docs/data/market_history.json --publish
+          fi
+          rm docs/data/market_index_staging.json
+          python tools/build_market_snapshot.py --input docs/data/market_history.json --output docs/data/market_snapshot.json --publish
+      - name: Save authorized market data
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/data/market_history.json docs/data/market_snapshot.json
+          if ! git diff --cached --quiet; then git commit -m 'Refresh licensed indices'; git push origin HEAD:main; fi
