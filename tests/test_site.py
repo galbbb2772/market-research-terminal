@@ -12,7 +12,12 @@ class StaticSiteTests(unittest.TestCase):
             self.assertIn('<html',s)
             self.assertIn('</body>',s)
         self.assertIn('news_history.json',(ROOT/'docs/index.html').read_text(encoding='utf-8'))
-        self.assertIn('structure_lab.json',(ROOT/'docs/structure-lab.html').read_text(encoding='utf-8'))
+        structure=(ROOT/'docs/structure-lab.html').read_text(encoding='utf-8')
+        self.assertIn('structure_lab.json',structure)
+        self.assertIn('id="currentBox"',structure)
+        self.assertIn('底部区',structure)
+        self.assertIn('顶部区',structure)
+        self.assertIn('x[5]==null&&b[5]==null?null',structure)
         self.assertFalse((ROOT/'docs/data/structure_lab.json').exists(),'Repo must not ship unapproved structure history.')
 
     def test_static_links_and_assets(self):
@@ -53,7 +58,7 @@ class StaticSiteTests(unittest.TestCase):
         x=json.loads((ROOT/'docs/data/news_history.json').read_text(encoding='utf-8'))
         rows=x.get('history',[])
         self.assertTrue(rows)
-        self.assertEqual(len({r['date'] for r in rows}),len(rows))
+        self.assertEqual(len({r['date'] for r in rows),len(rows)))
         self.assertTrue(all('reaction_adjusted' in r for r in rows))
 
     def test_no_synthetic_history_accepted_for_empty_inputs(self):
