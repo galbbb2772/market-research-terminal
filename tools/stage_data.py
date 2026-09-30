@@ -6,6 +6,9 @@ from __future__ import annotations
 import argparse, json, os
 from pathlib import Path
 
+def _number(v):
+    return isinstance(v,(float,int)) and not isinstance(v,bool)
+
 def validate(obj):
     if not isinstance(obj,dict) or obj.get('schema')!='STRUCTURE-LAB-V1':
         raise ValueError('Expected STRUCTURE-LAB-V1 object')
@@ -23,10 +26,13 @@ def validate(obj):
             day,op,hi,lo,close,vol=b[:6]
             if not (isinstance(day,str) and len(day)==10):
                 raise ValueError(f'{ticker}: invalid date')
-            if not all(isinstance(v,(float,int)) and not isinstance(v,bool) for v in (op,hi,lo,close,vol)):
-                raise ValueError(f'{ticker}: nonnumeric OHLCV')
-            if not (hi>=max(op,close,lo) and lo<=min(op,close,hi) and lo>0 and vol>=0):
-                raise ValueError(f'{ticker}: invalid OHLCV')
+            if not all(_number(v) for v in (op,hi,lo,close)):
+                raise ValueError(f'{ticker}: nonnumeric OHLC')
+            # Headline indices may legitimately have no economically meaningful volume.
+            if vol is not None and (not _number(vol) or vol<0):
+                raise ValueError(f'{ticker}: invalid volume')
+            if not (hi>=max(op,close,lo) and lo<=min(op,close,hi) and lo>0):
+                raise ValueError(f'{ticker}: invalid OHLC')
             days.append(day)
         if days!=sorted(set(days)):
             raise ValueError(f'{ticker}: unsorted or duplicate dates')
@@ -35,6 +41,13 @@ def validate(obj):
                 raise ValueError(f'{ticker}: incomplete box')
             if box['start_at']>box['detected_at'] or box['lower']>box['upper']:
                 raise ValueError(f'{ticker}: invalid box timeline or bounds')
+            if box.get('end_at') and box['detected_at']>box['end_at']:
+                raise ValueError(f'{ticker}: box ends before detection')
+            scores=box.get('scores') or {}
+            if not all(k in scores for k in ('formation','stability','difficulty','composite')):
+                raise ValueError(f'{ticker}: incomplete box scores')
+            if not all(_number(v) and 0<=v<=10 for v in scores.values()):
+                raise ValueError(f'{ticker}: score outside 0-10')
     return True
 
 def main():
