@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "notes": "Connector slots only. Do not treat a configured source as a verified or authorized dataset.",
+  "slots": {
+    "historical_ohlcv": {
+      "status": "not_connected",
+      "provider": null,
+      "required": "date,open,high,low,close,volume,source_provenance,adjustment"
+    },
+    "sector_etf_daily": {
+      "status": "not_connected",
+      "provider": null,
+      "required": "dated ETF daily OHLCV and ETF inception rules"
+    },
+    "macro_monthly": {
+      "status": "not_connected",
+      "provider": null,
+      "required": "provider,unit,frequency,observation_date,release_date,revision"
+    },
+    "financial_conditions_weekly": {
+      "status": "not_connected",
+      "provider": null,
+      "required": "provider,release_date,weekly_observation_date"
+    },
+    "news_archive": {
+      "status": "archived_local_only",
+      "provider": "prior market-indicators-v1 derived archive",
+      "release_rights": "requires review"
+    }
+  }
+}
