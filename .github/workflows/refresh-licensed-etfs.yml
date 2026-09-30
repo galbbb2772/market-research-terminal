@@ -1,0 +1,65 @@
+name: Refresh licensed ETF end-of-day data
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 2 * * 2-6' # after the previous US trading session
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  licensed-etfs:
+    # NEVER enable until the actual signed license explicitly covers public
+    # website display AND publishing/cache of these EOD bars as static JSON.
+    if: ${{ vars.MARKET_DATA_PUBLIC_DISPLAY_APPROVED == 'true' && vars.MARKET_DATA_LICENSE_REFERENCE != '' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify source code before network access
+        run: |
+          python -m unittest discover -s tests -v
+          python -m py_compile tools/fetch_licensed_etfs.py tools/build_market_snapshot.py
+      - name: Fetch ONLY licensed canonical ETFs
+        env:
+          TIINGO_API_TOKEN: ${{ secrets.TIINGO_API_TOKEN }}
+          MARKET_DATA_PUBLIC_DISPLAY_APPROVED: ${{ vars.MARKET_DATA_PUBLIC_DISPLAY_APPROVED }}
+          MARKET_DATA_LICENSE_REFERENCE: ${{ vars.MARKET_DATA_LICENSE_REFERENCE }}
+        run: |
+          set -euo pipefail
+          python tools/fetch_licensed_etfs.py \
+            --start 2019-01-01 \
+            --output docs/data/market_history.json \
+            --publish
+          python tools/build_market_snapshot.py \
+            --input docs/data/market_history.json \
+            --output docs/data/market_snapshot.json \
+            --publish
+      - name: Store provenance and updated website data
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/data/market_history.json docs/data/market_snapshot.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Refresh licensed canonical ETF EOD data'
+            git push origin HEAD:main
+          fi
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload website including latest authorized data
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+      - name: Deploy website
+        uses: actions/deploy-pages@v4
+        id: deployment
