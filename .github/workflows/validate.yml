@@ -14,6 +14,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Compile data connectors
+        run: python -m py_compile tools/fetch_public_sources.py tools/stage_data.py
       - name: Verify website, links and archived research status
         run: python -m unittest discover -s tests -v
       - name: Validate independent frontend JavaScript
@@ -22,7 +24,7 @@ jobs:
           python - <<'PYCODE'
           import re, subprocess
           from pathlib import Path
-          for item in ('research-hub.html','structure-lab.html','cycle-lab.html'):
+          for item in ('research-hub.html','structure-lab.html','cycle-lab.html','api-status.html'):
               html=(Path('docs')/item).read_text(encoding='utf-8')
               for text in re.findall(r'<script(?![^>]*src=)[^>]*>(.*?)</script>',html,re.S|re.I):
                   if text.strip():
