@@ -1,0 +1,57 @@
+{
+  "schema":"MARKET-UNIVERSE-V1",
+  "scope":"ETF_AND_MAJOR_INDEX_ONLY",
+  "updated_at":"2026-09-30",
+  "exclude":{"individual_stocks":true,"delisted_stocks":true,"stock_constituent_history":true,"strategy_backtests":true},
+  "benchmarks":[
+    {"id":"SPY","type":"etf","name":"SPDR S&P 500 ETF Trust","role":"S&P 500 ETF proxy"},
+    {"id":"QQQ","type":"etf","name":"Invesco QQQ Trust","role":"Nasdaq-100 ETF proxy"},
+    {"id":"DIA","type":"etf","name":"SPDR Dow Jones Industrial Average ETF Trust","role":"DJIA ETF proxy"}
+  ],
+  "major_indices":[
+    {"id":"SP500","type":"index","name":"S&P 500 Index"},
+    {"id":"NDX","type":"index","name":"Nasdaq-100 Index"},
+    {"id":"NASDAQ_COMPOSITE","type":"index","name":"Nasdaq Composite Index"},
+    {"id":"DJIA","type":"index","name":"Dow Jones Industrial Average"}
+  ],
+  "sector_systems":{
+    "sp500":{"label":"S&P 500","basis":"GICS first-level sectors","items":[
+      {"id":"XLB","sector":"Materials","name":"Materials Select Sector SPDR Fund","kind":"ETF"},
+      {"id":"XLC","sector":"Communication Services","name":"Communication Services Select Sector SPDR Fund","kind":"ETF"},
+      {"id":"XLE","sector":"Energy","name":"Energy Select Sector SPDR Fund","kind":"ETF"},
+      {"id":"XLF","sector":"Financials","name":"Financial Select Sector SPDR Fund","kind":"ETF"},
+      {"id":"XLI","sector":"Industrials","name":"Industrial Select Sector SPDR Fund","kind":"ETF"},
+      {"id":"XLK","sector":"Information Technology","name":"Technology Select Sector SPDR Fund","kind":"ETF"},
+      {"id":"XLP","sector":"Consumer Staples","name":"Consumer Staples Select Sector SPDR Fund","kind":"ETF"},
+      {"id":"XLRE","sector":"Real Estate","name":"Real Estate Select Sector SPDR Fund","kind":"ETF"},
+      {"id":"XLU","sector":"Utilities","name":"Utilities Select Sector SPDR Fund","kind":"ETF"},
+      {"id":"XLV","sector":"Health Care","name":"Health Care Select Sector SPDR Fund","kind":"ETF"},
+      {"id":"XLY","sector":"Consumer Discretionary","name":"Consumer Discretionary Select Sector SPDR Fund","kind":"ETF"}
+    ]},
+    "nasdaq100":{"label":"Nasdaq-100","basis":"Nasdaq-100 industry breakdown; financial companies excluded","items":[
+      {"sector":"Basic Materials","status":"taxonomy_only"},
+      {"sector":"Consumer Discretionary","status":"taxonomy_only"},
+      {"sector":"Consumer Staples","status":"taxonomy_only"},
+      {"sector":"Health Care","status":"taxonomy_only"},
+      {"sector":"Industrials","status":"taxonomy_only"},
+      {"id":"NDXT","sector":"Technology","name":"Nasdaq-100 Technology Sector Index","kind":"INDEX","status":"verified"},
+      {"id":"QTEC","sector":"Technology","name":"First Trust NASDAQ-100-Technology Sector Index Fund","kind":"ETF","tracks":"NDXT","status":"verified"},
+      {"sector":"Telecommunications","status":"taxonomy_only"},
+      {"sector":"Utilities","status":"taxonomy_only"}
+    ]},
+    "dow_us":{"label":"Dow Jones U.S.","basis":"Dow Jones U.S. Sector and Industry Indices; not the 30-stock DJIA decomposition","items":[
+      {"id":"DJUSTC","sector":"Technology","name":"Dow Jones U.S. Technology Index","kind":"INDEX","status":"verified"},
+      {"id":"DJUSFN","sector":"Financials","name":"Dow Jones U.S. Financials Index","kind":"INDEX","status":"verified"},
+      {"sector":"Industrials","status":"taxonomy_only"},
+      {"sector":"Consumer Services","status":"taxonomy_only"},
+      {"sector":"Health Care","status":"taxonomy_only"},
+      {"sector":"Consumer Goods","status":"taxonomy_only"},
+      {"sector":"Oil & Gas","status":"taxonomy_only"},
+      {"sector":"Utilities","status":"taxonomy_only"},
+      {"sector":"Basic Materials","status":"taxonomy_only"},
+      {"sector":"Telecommunications","status":"taxonomy_only"}
+    ]}
+  },
+  "market_snapshot_contract":{"optional_file":"market_snapshot.json","fields":["date","id","close","return_1d","return_5d","return_20d","volatility_20d","drawdown_from_peak","relative_to_spy_20d","activity_score","range_box_state"]},
+  "notes":["No individual-stock or delisted-stock history belongs in this website universe.","QQQ tracks Nasdaq-100; Nasdaq Composite is separate.","Do not fabricate Nasdaq or Dow sector trackers when an exact mapping has not been verified."]
+}
