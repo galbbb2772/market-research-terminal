@@ -30,10 +30,11 @@ jobs:
             python tools/merge_market_history.py --overlay docs/data/market_index_staging.json --output docs/data/market_history.json --publish
           fi
           rm docs/data/market_index_staging.json
-          python tools/build_market_snapshot.py --input docs/data/market_history.json --output docs/data/market_snapshot.json --publish
+          python tools/build_structure_lab.py --input docs/data/market_history.json --output docs/data/structure_lab.json --publish
+          python tools/build_market_snapshot.py --input docs/data/market_history.json --structure docs/data/structure_lab.json --output docs/data/market_snapshot.json --publish
       - name: Save authorized market data
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add docs/data/market_history.json docs/data/market_snapshot.json
+          git add docs/data/market_history.json docs/data/structure_lab.json docs/data/market_snapshot.json
           if ! git diff --cached --quiet; then git commit -m 'Refresh licensed indices'; git push origin HEAD:main; fi
