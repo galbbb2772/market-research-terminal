@@ -24,8 +24,9 @@ jobs:
       - name: Verify source code before network access
         run: |
           python -m unittest discover -s tests -v
-          python -m py_compile tools/fetch_licensed_etfs.py tools/merge_market_history.py tools/build_market_snapshot.py
-      - name: Fetch licensed canonical ETFs, merge with any licensed index history, then derive snapshot
+          python -m py_compile tools/fetch_licensed_etfs.py tools/merge_market_history.py \
+            tools/build_structure_lab.py tools/build_market_snapshot.py
+      - name: Fetch licensed canonical ETFs, merge with any licensed index history, then derive structure and snapshot
         env:
           TIINGO_API_TOKEN: ${{ secrets.TIINGO_API_TOKEN }}
           MARKET_DATA_PUBLIC_DISPLAY_APPROVED: ${{ vars.MARKET_DATA_PUBLIC_DISPLAY_APPROVED }}
@@ -40,15 +41,20 @@ jobs:
           if [ -f docs/data/market_history.json ]; then args=(--base docs/data/market_history.json "${args[@]}"); fi
           python tools/merge_market_history.py "${args[@]}"
           rm -f docs/data/market_etf_staging.json
+          python tools/build_structure_lab.py \
+            --input docs/data/market_history.json \
+            --output docs/data/structure_lab.json \
+            --publish
           python tools/build_market_snapshot.py \
             --input docs/data/market_history.json \
+            --structure docs/data/structure_lab.json \
             --output docs/data/market_snapshot.json \
             --publish
       - name: Commit only final authorized website data
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add docs/data/market_history.json docs/data/market_snapshot.json
+          git add docs/data/market_history.json docs/data/structure_lab.json docs/data/market_snapshot.json
           if ! git diff --cached --quiet; then
             git commit -m 'Refresh licensed canonical ETF EOD data'
             git push origin HEAD:main
