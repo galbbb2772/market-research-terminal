@@ -5,20 +5,15 @@ on:
     - cron: '30 2 * * 2-6' # after the previous US trading session
 permissions:
   contents: write
-  pages: write
-  id-token: write
 concurrency:
-  group: pages
+  group: licensed-market-history-write
   cancel-in-progress: false
 jobs:
   licensed-etfs:
-    # NEVER enable until the actual signed license explicitly covers public
-    # website display AND publishing/cache of these EOD bars as static JSON.
+    # Disabled unless a written licence explicitly covers PUBLIC WEBSITE DISPLAY
+    # and the cached/static JSON use required by this repository.
     if: ${{ vars.MARKET_DATA_PUBLIC_DISPLAY_APPROVED == 'true' && vars.MARKET_DATA_LICENSE_REFERENCE != '' }}
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,8 +24,8 @@ jobs:
       - name: Verify source code before network access
         run: |
           python -m unittest discover -s tests -v
-          python -m py_compile tools/fetch_licensed_etfs.py tools/build_market_snapshot.py
-      - name: Fetch ONLY licensed canonical ETFs
+          python -m py_compile tools/fetch_licensed_etfs.py tools/merge_market_history.py tools/build_market_snapshot.py
+      - name: Fetch licensed canonical ETFs, merge with any licensed index history, then derive snapshot
         env:
           TIINGO_API_TOKEN: ${{ secrets.TIINGO_API_TOKEN }}
           MARKET_DATA_PUBLIC_DISPLAY_APPROVED: ${{ vars.MARKET_DATA_PUBLIC_DISPLAY_APPROVED }}
@@ -39,13 +34,17 @@ jobs:
           set -euo pipefail
           python tools/fetch_licensed_etfs.py \
             --start 2019-01-01 \
-            --output docs/data/market_history.json \
+            --output docs/data/market_etf_staging.json \
             --publish
+          args=(--overlay docs/data/market_etf_staging.json --output docs/data/market_history.json --publish)
+          if [ -f docs/data/market_history.json ]; then args=(--base docs/data/market_history.json "${args[@]}"); fi
+          python tools/merge_market_history.py "${args[@]}"
+          rm -f docs/data/market_etf_staging.json
           python tools/build_market_snapshot.py \
             --input docs/data/market_history.json \
             --output docs/data/market_snapshot.json \
             --publish
-      - name: Store provenance and updated website data
+      - name: Commit only final authorized website data
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -54,12 +53,3 @@ jobs:
             git commit -m 'Refresh licensed canonical ETF EOD data'
             git push origin HEAD:main
           fi
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-      - name: Upload website including latest authorized data
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: docs
-      - name: Deploy website
-        uses: actions/deploy-pages@v4
-        id: deployment
