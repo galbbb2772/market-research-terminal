@@ -2,7 +2,8 @@ import json,re,sys,unittest
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from tools.stage_data import validate
+from tools.stage_data import validate as validate_structure
+from tools.build_market_snapshot import validate_history, canonical_ids
 
 class StaticSiteTests(unittest.TestCase):
     def test_sites_present_and_have_honest_status(self):
@@ -18,7 +19,6 @@ class StaticSiteTests(unittest.TestCase):
         self.assertIn('底部区',structure)
         self.assertIn('顶部区',structure)
         self.assertIn('x[5]==null&&b[5]==null?null',structure)
-        self.assertFalse((ROOT/'docs/data/structure_lab.json').exists(),'Repo must not ship unapproved structure history.')
 
     def test_static_links_and_assets(self):
         for file in ('index.html','research-hub.html','structure-lab.html','cycle-lab.html','api-status.html','sector-map.html','instrument.html','news-archive.html'):
@@ -47,12 +47,33 @@ class StaticSiteTests(unittest.TestCase):
             self.assertIn('$schema',x)
             self.assertIn('properties',x)
 
+    def test_absent_or_authorized_real_history_only(self):
+        universe=json.loads((ROOT/'docs/data/market_universe.json').read_text(encoding='utf-8'))
+        history_path=ROOT/'docs/data/market_history.json'
+        structure_path=ROOT/'docs/data/structure_lab.json'
+        snapshot_path=ROOT/'docs/data/market_snapshot.json'
+        if history_path.exists():
+            history=json.loads(history_path.read_text(encoding='utf-8'))
+            self.assertEqual(history.get('rights_status'),'verified_publishable')
+            validate_history(history,canonical_ids(universe))
+            self.assertTrue(all(src.get('rights_status')=='verified_publishable' for src in history.get('sources',[])))
+        if structure_path.exists():
+            self.assertTrue(history_path.exists(),'Structure requires approved market history')
+            structure=json.loads(structure_path.read_text(encoding='utf-8'))
+            self.assertEqual(structure.get('rights_status'),'verified_publishable')
+            self.assertTrue(validate_structure(structure))
+            self.assertEqual(set(structure['instruments']),set(history['instruments']))
+        if snapshot_path.exists():
+            self.assertTrue(history_path.exists(),'Snapshot requires approved market history')
+            snap=json.loads(snapshot_path.read_text(encoding='utf-8'))
+            self.assertEqual(snap.get('rights_status'),'verified_publishable')
+            self.assertEqual({r['id'] for r in snap.get('rows',[])},set(history['instruments']))
+
     def test_new_pages_do_not_embed_fake_market_history(self):
         for file in ('index.html','sector-map.html','instrument.html'):
             text=(ROOT/'docs'/file).read_text(encoding='utf-8').lower()
             self.assertNotIn('demo data',text)
             self.assertNotIn('mock data',text)
-        self.assertFalse((ROOT/'docs/data/market_history.json').exists(),'Do not commit market history before display rights are approved.')
 
     def test_news_archive_is_original_real_short_archive(self):
         x=json.loads((ROOT/'docs/data/news_history.json').read_text(encoding='utf-8'))
@@ -62,6 +83,6 @@ class StaticSiteTests(unittest.TestCase):
         self.assertTrue(all('reaction_adjusted' in r for r in rows))
 
     def test_no_synthetic_history_accepted_for_empty_inputs(self):
-        with self.assertRaises(ValueError):validate({'schema':'STRUCTURE-LAB-V1','instruments':{}})
+        with self.assertRaises(ValueError):validate_structure({'schema':'STRUCTURE-LAB-V1','instruments':{}})
 
 if __name__=='__main__':unittest.main()
