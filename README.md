@@ -1,29 +1,69 @@
 # Market Research Terminal
 
-**独立美股市场结构与周期可视化网站**。当前只做网站、数据展示框架、数据接口占位配置和GitHub Actions静态检查/手动部署流程。**本仓库不包含回测、策略验证、样本外评估或实盘交易模块。**
+独立的 **美国大盘 / 行业结构 / 宏观 / 新闻 / 历史结构** 可视化网站。
 
-## 本版页面
+当前正式范围已经固定为：**ETF + 主要指数**。本仓库不建设全美股个股数据库，不需要退市股历史，不包含策略回测、Sharpe、OOS、实盘交易或 Frozen V4 策略代码。
 
-- `docs/index.html`: 网站首页 / 六大模块入口 + 已归档新闻曲线
-- `docs/structure-lab.html`: 历史箱体、日K分布、行业活跃度、宏观观测界面
-- `docs/cycle-lab.html`: 周期结构观察页面，仅展示历史自相关、箱体持续期等描述性统计（没有经核实数据时仅显示待接入）
-- `docs/research-terminal-v2.css` / `.js`: 研究终端视觉、时间区间、箱体评分卡和交互扩展
-- `docs/data/news_history.json`: 已有短期派生新闻评分历史；发布前仍需确认使用许可
-- `config/data_sources.json`: 未来外部数据源接入槽位；**行情、ETF、宏观历史接口目前未接入这个新仓库**
-- `tools/stage_data.py`: 在授权并取得真实数据之后校验本地数据文件的发布工具，不抓取任何接口
+## 当前页面
 
-## 本地看网站
+- `docs/index.html`：统一研究首页，大盘核心资产 + 六个研究模块
+- `docs/sector-map.html`：S&P 500 / Nasdaq-100 / Dow Jones U.S. 三套行业地图
+- `docs/instrument.html`：统一指数 / ETF 详情页，预留真实日K、1D/5D/20D、波动率、回撤、相对SPY和箱体
+- `docs/structure-lab.html`：历史箱体、日K分布、行业活跃度、宏观观测
+- `docs/cycle-lab.html`：历史自相关、箱体持续期等描述性周期结构
+- `docs/news-archive.html`：现有短期新闻紧张度五项分量存档
+- `docs/api-status.html`：官方公共数据接口状态
 
-运行：`python -m http.server 8000 --directory docs`，在浏览器打开 `http://127.0.0.1:8000/`。手机端可查看页面，部分行情图表会明确标记“等待真实数据发布”，这是设计行为。
+## 市场范围
 
-## GitHub 仓库
+### 大盘 ETF
 
-公开仓库：`galbbb2772/market-research-terminal`。本仓库只承载研究网站、图表、数据接口占位配置、数据发布校验和部署流程。
+- SPY
+- QQQ
+- DIA
 
-**请勿把访问令牌或API Key提交到仓库或发到聊天。**
+### 主要指数
 
-## 发布机制（默认停用）
+- S&P 500
+- Nasdaq-100
+- Nasdaq Composite
+- Dow Jones Industrial Average
 
-默认只有独立CI静态检查，没有自动公开GitHub Pages发布。`.github/workflows/deploy.yml` 只能手动触发，而且需要你在GitHub Repo Variables明确设置 `WEBSITE_DEPLOY_AUTHORIZED=true` 以及 `DATA_RIGHTS_APPROVED=true`；核验新闻存档与以后新接数据的再分发权后才允许开启。上线前对已发布数据与网站权限分别复核。
+QQQ 跟踪 Nasdaq-100，**不是** Nasdaq Composite；网站内始终分开处理。
 
-当前**已建立独立公开GitHub仓库**；新市场数据接口仍待后续接入，GitHub Pages默认未启用。
+### S&P 500 一级行业 ETF
+
+`XLB XLC XLE XLF XLI XLK XLP XLRE XLU XLV XLY`
+
+### Nasdaq-100 行业
+
+按 Nasdaq 官方行业分类。只有在官方行业指数或对应 ETF 的准确映射被核验后，才加入代码；不能为了凑齐 11 个行业而虚构映射。
+
+### Dow Jones 行业
+
+使用更广泛的 Dow Jones U.S. Sector / Industry Index 家族，而不是把 30 只 DJIA 成分股硬拆成完整行业指数体系。
+
+## 行情数据合同
+
+- `docs/data/market_universe.json`：网站允许出现的指数 / ETF / 行业体系
+- `docs/data/market_snapshot.schema.json`：首页和行业热力图小型快照合同
+- `docs/data/market_history.schema.json`：统一历史日K合同
+- `research/MARKET_DATA_CONTRACT_CN.md`：计算口径与公开展示规则
+
+公开 GitHub Pages 只能读取经核准为 `verified_publishable` 的行情数据。缺数据时页面明确显示等待数据，不生成演示行情或模拟历史。
+
+## 数据管线
+
+目标结构：
+
+`数据源 -> GitHub Actions / 服务端抓取 -> 清洗 -> 标准 JSON -> docs/data -> 静态网页`
+
+API Key 不写入网页 JavaScript，也不要提交到公开仓库。
+
+## 现有官方公共数据
+
+宏观与金融条件方向已经建立 BLS、U.S. Treasury、Federal Reserve、NY Fed、OECD、World Bank 等官方来源的抓取/探针框架；行情数据源仍单独按公开展示许可筛选。
+
+## 网站
+
+GitHub Pages 已启用；仓库：`galbbb2772/market-research-terminal`。
