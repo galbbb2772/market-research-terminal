@@ -1,31 +1,39 @@
 {
-  "schema_version": "1.0",
-  "notes": "Connector slots only. Do not treat a configured source as a verified or authorized dataset.",
-  "slots": {
-    "historical_ohlcv": {
-      "status": "not_connected",
-      "provider": null,
-      "required": "date,open,high,low,close,volume,source_provenance,adjustment"
+  "schema_version":"1.1",
+  "notes":"Current website scope is ETF + major indices only. No individual-stock or delisted-stock market database is required.",
+  "slots":{
+    "market_history_daily":{
+      "status":"not_connected",
+      "provider":null,
+      "scope":"SPY, QQQ, DIA, S&P 500, Nasdaq-100, Nasdaq Composite, DJIA, S&P sector ETFs, verified Nasdaq sector trackers, verified Dow Jones U.S. sector indices",
+      "required":"date,open,high,low,close,volume|null,adjusted_close|null,provider_symbol,source_provenance,adjustment,rights_status",
+      "public_rule":"Only verified_publishable data may be written to docs/data/market_history.json"
     },
-    "sector_etf_daily": {
-      "status": "not_connected",
-      "provider": null,
-      "required": "dated ETF daily OHLCV and ETF inception rules"
+    "market_snapshot":{
+      "status":"not_connected",
+      "provider":null,
+      "required":"id,date,close,return_1d,return_5d,return_20d,volatility_20d,drawdown_from_peak,relative_to_spy_20d,activity_score,range_box_state",
+      "public_rule":"Derived only from approved market history or another approved display source"
     },
-    "macro_monthly": {
-      "status": "not_connected",
-      "provider": null,
-      "required": "provider,unit,frequency,observation_date,release_date,revision"
+    "sector_taxonomy":{
+      "status":"partially_verified",
+      "provider":"canonical market_universe.json",
+      "notes":"S&P 500 11-sector ETFs are mapped. Nasdaq-100 and Dow Jones U.S. sector codes are added only after exact official mapping is verified."
     },
-    "financial_conditions_weekly": {
-      "status": "not_connected",
-      "provider": null,
-      "required": "provider,release_date,weekly_observation_date"
+    "macro_monthly":{
+      "status":"connected_via_official_public_sources",
+      "provider":"BLS/Treasury/Federal Reserve/NY Fed/OECD/World Bank and other official sources",
+      "required":"provider,unit,frequency,observation_date,release_date,revision"
     },
-    "news_archive": {
-      "status": "archived_local_only",
-      "provider": "prior market-indicators-v1 derived archive",
-      "release_rights": "requires review"
+    "financial_conditions_weekly":{
+      "status":"candidate_expansion",
+      "provider":"official Federal Reserve / Chicago Fed / NY Fed sources",
+      "required":"provider,release_date,weekly_observation_date"
+    },
+    "news_archive":{
+      "status":"archived_local_only",
+      "provider":"prior market-indicators-v1 derived archive",
+      "release_rights":"requires review"
     }
   }
 }
