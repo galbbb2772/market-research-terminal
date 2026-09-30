@@ -1,0 +1,27 @@
+name: Manual website deployment (OFF until owner + rights review)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  deploy:
+    # Requires explicit repo-level variables set after licensing and owner approval.
+    if: vars.WEBSITE_DEPLOY_AUTHORIZED == 'true' && vars.DATA_RIGHTS_APPROVED == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -v
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+      - uses: actions/deploy-pages@v5
+        id: deployment
