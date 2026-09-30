@@ -1,0 +1,30 @@
+name: Probe official public sources
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/fetch_public_sources.py'
+      - '.github/workflows/probe-public-sources.yml'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch and validate public sources
+        run: python tools/fetch_public_sources.py --output /tmp/official_sources.json --sec-output /tmp/sec_tickers.json --require-min-ok 4
+      - name: Print compact source status
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/official_sources.json',encoding='utf-8'))
+          print('SOURCE_RESULT',d['ok_count'],'/',d['source_count'])
+          for k,v in d['sources'].items():
+              print(k, v.get('status'), v.get('error',''))
+          PY
