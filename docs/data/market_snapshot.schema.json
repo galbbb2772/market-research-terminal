@@ -1,0 +1,19 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Market Snapshot V1",
+  "type":"object",
+  "required":["schema","rows"],
+  "properties":{
+    "schema":{"const":"MARKET-SNAPSHOT-V1"},
+    "as_of":{"type":["string","null"]},
+    "provider":{"type":["string","null"]},
+    "rights_status":{"enum":["verified_publishable","verified_internal_only","pending_review","not_connected"]},
+    "rows":{"type":"array","items":{"type":"object","required":["id","date"],"properties":{
+      "id":{"type":"string"},"date":{"type":"string"},"close":{"type":["number","null"]},
+      "return_1d":{"type":["number","null"]},"return_5d":{"type":["number","null"]},"return_20d":{"type":["number","null"]},
+      "volatility_20d":{"type":["number","null"]},"drawdown_from_peak":{"type":["number","null"]},"relative_to_spy_20d":{"type":["number","null"]},
+      "activity_score":{"type":["number","null"],"minimum":0,"maximum":100},"range_box_state":{"type":["string","null"]}
+    },"additionalProperties":true}}
+  },
+  "additionalProperties":true
+}
