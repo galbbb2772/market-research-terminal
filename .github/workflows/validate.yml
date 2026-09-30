@@ -20,13 +20,11 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Validate frontend JavaScript
         run: |
-          node --check docs/research-terminal-v2.js
-          node --check docs/sector-map.js
-          node --check docs/instrument.js
+          for f in docs/research-terminal-v2.js docs/home.js docs/sector-map.js docs/instrument.js docs/news-archive.js; do node --check "$f"; done
           python - <<'PYCODE'
           import re, subprocess
           from pathlib import Path
-          for item in ('research-hub.html','structure-lab.html','cycle-lab.html','api-status.html','sector-map.html','instrument.html'):
+          for item in ('index.html','research-hub.html','structure-lab.html','cycle-lab.html','api-status.html','sector-map.html','instrument.html','news-archive.html'):
               html=(Path('docs')/item).read_text(encoding='utf-8')
               for text in re.findall(r'<script(?![^>]*src=)[^>]*>(.*?)</script>',html,re.S|re.I):
                   if text.strip():
