@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+.venv/
+.pytest_cache/
+.DS_Store
+site/
+preview/
+# Never commit raw licensed price feeds, private trading inputs or unreviewed generated archives
+raw_data/
+private_data/
+*.parquet
+*.sqlite
+*.db
