@@ -19,6 +19,12 @@ class StaticSiteTests(unittest.TestCase):
         self.assertIn('底部区',structure)
         self.assertIn('顶部区',structure)
         self.assertIn('x[5]==null&&b[5]==null?null',structure)
+        cycle=(ROOT/'docs/cycle-lab.html').read_text(encoding='utf-8')
+        self.assertIn('id="selectedValidation"',cycle)
+        self.assertIn('id="validationGlobal"',cycle)
+        self.assertIn('Benjamini-Hochberg',cycle)
+        self.assertIn('保留候选',cycle)
+        self.assertIn('未获支持',cycle)
 
     def test_static_links_and_assets(self):
         for file in ('index.html','research-hub.html','structure-lab.html','cycle-lab.html','api-status.html','sector-map.html','instrument.html','news-archive.html'):
