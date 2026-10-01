@@ -2,7 +2,7 @@
 """Create a local Tiingo EOD bundle for Market Research Terminal.
 
 The Tiingo token is read interactively and is never written to the output file.
-Uses only Python's standard library.
+Uses only Python's standard library. Provider-adjusted OHLCV is preferred.
 """
 from __future__ import annotations
 
@@ -23,6 +23,22 @@ TICKERS = [
 ]
 
 
+def normalize_adjusted(rows):
+    out = []
+    for r in rows:
+        has_adj = all(r.get(k) is not None for k in ("adjOpen", "adjHigh", "adjLow", "adjClose"))
+        out.append({
+            "date": r.get("date"),
+            "open": r.get("adjOpen") if has_adj else r.get("open"),
+            "high": r.get("adjHigh") if has_adj else r.get("high"),
+            "low": r.get("adjLow") if has_adj else r.get("low"),
+            "close": r.get("adjClose") if has_adj else r.get("close"),
+            "volume": (r.get("adjVolume") if r.get("adjVolume") is not None else r.get("volume")) if has_adj else r.get("volume"),
+            "priceBasis": "provider-adjusted" if has_adj else "raw-fallback",
+        })
+    return out
+
+
 def fetch_symbol(symbol: str, token: str, start: str, end: str):
     query = urllib.parse.urlencode({"startDate": start, "endDate": end, "format": "json"})
     url = f"https://api.tiingo.com/tiingo/daily/{urllib.parse.quote(symbol)}/prices?{query}"
@@ -31,7 +47,7 @@ def fetch_symbol(symbol: str, token: str, start: str, end: str):
         headers={
             "Authorization": f"Token {token}",
             "Accept": "application/json",
-            "User-Agent": "MarketResearchTerminal-Personal/1.1",
+            "User-Agent": "MarketResearchTerminal-Personal/1.2",
         },
     )
     try:
@@ -44,7 +60,7 @@ def fetch_symbol(symbol: str, token: str, start: str, end: str):
         raise RuntimeError(f"{symbol}: network error: {exc.reason}") from exc
     if not isinstance(payload, list) or not payload:
         raise RuntimeError(f"{symbol}: no EOD rows returned")
-    return payload
+    return normalize_adjusted(payload)
 
 
 def main() -> int:
@@ -67,8 +83,9 @@ def main() -> int:
         data[symbol] = fetch_symbol(symbol, token, args.start, args.end)
 
     out = {
-        "schema": "MRT-TIINGO-PERSONAL-BUNDLE-V1",
+        "schema": "MRT-TIINGO-PERSONAL-BUNDLE-V2",
         "provider": "Tiingo EOD",
+        "price_basis": "provider-adjusted-first",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "start": args.start,
         "end": args.end,
