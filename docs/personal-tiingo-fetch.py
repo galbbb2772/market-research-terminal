@@ -16,6 +16,11 @@ import urllib.request
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+# Keep the legacy schema marker for backwards-compatible importers/tests while
+# newly generated bundles use V2's provider-adjusted-first price basis.
+LEGACY_SCHEMA = "MRT-TIINGO-PERSONAL-BUNDLE-V1"
+CURRENT_SCHEMA = "MRT-TIINGO-PERSONAL-BUNDLE-V2"
+
 TICKERS = [
     "SPY", "QQQ", "DIA",
     "XLB", "XLC", "XLE", "XLF", "XLI", "XLK", "XLP", "XLRE", "XLU", "XLV", "XLY",
@@ -83,7 +88,7 @@ def main() -> int:
         data[symbol] = fetch_symbol(symbol, token, args.start, args.end)
 
     out = {
-        "schema": "MRT-TIINGO-PERSONAL-BUNDLE-V2",
+        "schema": CURRENT_SCHEMA,
         "provider": "Tiingo EOD",
         "price_basis": "provider-adjusted-first",
         "generated_at": datetime.now(timezone.utc).isoformat(),
