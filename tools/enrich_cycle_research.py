@@ -5,6 +5,7 @@ This module never downloads or invents observations. It uses only already valida
 structure_lab.json contents. Outputs are descriptive statistics, not forecasts:
 - weekly sector-ETF relative returns versus SPY and 1-26 week autocorrelation
 - 4-week relative-to-SPY leadership history and leadership tenure/switch counts
+- daily sector activity leadership and 1/5/20-session cross-sectional rank persistence
 - completed small/large box duration distributions
 """
 from __future__ import annotations
@@ -19,6 +20,7 @@ from pathlib import Path
 MIN_CORR_PAIRS = 20
 MAX_LAG_WEEKS = 26
 LEADERSHIP_LOOKBACK_WEEKS = 4
+ACTIVITY_RANK_LAGS = (1, 5, 20)
 
 
 def load(path):
@@ -180,6 +182,112 @@ def leadership_research(instruments, spy_bars):
     }
 
 
+def average_ranks(values):
+    pairs = sorted(values.items(), key=lambda x: x[1])
+    out = {}
+    i = 0
+    while i < len(pairs):
+        j = i + 1
+        while j < len(pairs) and pairs[j][1] == pairs[i][1]:
+            j += 1
+        rank = ((i + 1) + j) / 2.0
+        for k in range(i, j):
+            out[pairs[k][0]] = rank
+        i = j
+    return out
+
+
+def activity_maps(instruments):
+    maps = {}
+    for symbol, item in instruments.items():
+        if item.get('group') != 'sector':
+            continue
+        m = {}
+        for row in item.get('sector_history') or []:
+            if isinstance(row, list) and len(row) >= 2 and finite(row[1]):
+                m[str(row[0])] = float(row[1])
+        if m:
+            maps[symbol] = m
+    return maps
+
+
+def activity_rotation(instruments):
+    maps = activity_maps(instruments)
+    if not maps:
+        return {'status': 'insufficient_activity_history', 'history': [], 'rank_persistence': []}
+    total = len(maps)
+    required = max(3, math.ceil(total * 0.7))
+    dates = sorted(set().union(*(set(m) for m in maps.values())))
+    snapshots = []
+    history = []
+    for day in dates:
+        values = {symbol: m[day] for symbol, m in maps.items() if day in m}
+        if len(values) < required:
+            continue
+        ranked = sorted(values.items(), key=lambda x: x[1], reverse=True)
+        arr = list(values.values())
+        snapshots.append((day, values))
+        history.append({
+            'date': day,
+            'leader': ranked[0][0],
+            'leader_activity': round(ranked[0][1], 4),
+            'top3': [{'symbol': s, 'activity': round(v, 4)} for s, v in ranked[:3]],
+            'coverage': len(values),
+            'mean_activity': round(statistics.fmean(arr), 4),
+            'dispersion': round(statistics.pstdev(arr), 4) if len(arr) > 1 else 0.0,
+        })
+    if not history:
+        return {'status': 'insufficient_cross_section', 'history': [], 'rank_persistence': []}
+    episodes = []
+    cur = history[0]['leader']
+    length = 1
+    for row in history[1:]:
+        if row['leader'] == cur:
+            length += 1
+        else:
+            episodes.append({'leader': cur, 'sessions': length})
+            cur, length = row['leader'], 1
+    episodes.append({'leader': cur, 'sessions': length})
+    switches = sum(a['leader'] != b['leader'] for a, b in zip(history, history[1:]))
+    persistence = []
+    for lag in ACTIVITY_RANK_LAGS:
+        corrs = []
+        for i in range(lag, len(snapshots)):
+            prev = snapshots[i - lag][1]
+            curmap = snapshots[i][1]
+            common = sorted(set(prev) & set(curmap))
+            if len(common) < required:
+                continue
+            r0 = average_ranks({k: prev[k] for k in common})
+            r1 = average_ranks({k: curmap[k] for k in common})
+            corr = pearson([r0[k] for k in common], [r1[k] for k in common])
+            if corr is not None:
+                corrs.append(corr)
+        persistence.append({
+            'lag_sessions': lag,
+            'mean_spearman': round(statistics.fmean(corrs), 6) if corrs else None,
+            'median_spearman': round(statistics.median(corrs), 6) if corrs else None,
+            'pairs': len(corrs),
+        })
+    counts = {}
+    for row in history:
+        counts[row['leader']] = counts.get(row['leader'], 0) + 1
+    return {
+        'status': 'descriptive_volume_range_activity_rotation',
+        'sector_count': total,
+        'required_daily_coverage': required,
+        'observations': len(history),
+        'switch_count': switches,
+        'switch_rate_pct': round(100.0 * switches / max(1, len(history) - 1), 2),
+        'median_tenure_sessions': round(statistics.median([e['sessions'] for e in episodes]), 2),
+        'latest': history[-1],
+        'leader_counts': counts,
+        'rank_persistence': persistence,
+        'episodes': episodes,
+        'history': history,
+    }
+
+
 def percentile_nearest(values, p):
     if not values:
         return None
@@ -225,17 +333,20 @@ def enrich(structure):
     news_n = len(structure.get('news_tension') or [])
     structure['cycle_research'] = {
         'status': 'research_only',
-        'method': 'descriptive_weekly_relative_returns_no_forecast',
+        'method': 'descriptive_weekly_relative_returns_and_activity_rotation_no_forecast',
         'autocorrelation_lags_weeks': [1, MAX_LAG_WEEKS],
         'minimum_pairs_per_correlation': MIN_CORR_PAIRS,
         'sectors': sectors,
         'leadership': leadership_research(instruments, spy) if spy else {'status': 'SPY_missing', 'history': []},
+        'activity_rotation': activity_rotation(instruments),
         'boxes': box_duration_stats(instruments),
         'news_status': f'real_archive_{news_n}_days' if news_n else 'unavailable',
         'notes': [
             'Autocorrelation is calculated on weekly sector ETF return minus SPY weekly return.',
             'A correlation peak is descriptive and must not be labelled a confirmed market cycle without separate statistical validation.',
-            'Leadership uses rolling 4-week relative-to-SPY performance and records historical cross-sectional leaders only.',
+            'Return leadership uses rolling 4-week relative-to-SPY performance and records historical cross-sectional leaders only.',
+            'Activity rotation uses the existing turnover/range percentile activity proxy; it is not fund flow, news attention, or social attention.',
+            'Activity rank persistence is the average/median cross-sectional Spearman correlation at 1/5/20-session lags.',
             'Box duration uses completed boxes only and is affected by right censoring and detector parameters.',
         ],
     }
