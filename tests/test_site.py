@@ -7,13 +7,14 @@ from tools.build_market_snapshot import validate_history, canonical_ids
 
 class StaticSiteTests(unittest.TestCase):
     def test_sites_present_and_have_honest_status(self):
-        pages=('index.html','research-hub.html','structure-lab.html','cycle-lab.html','personal-data.html','api-status.html','sector-map.html','instrument.html','news-archive.html')
+        pages=('index.html','research-hub.html','structure-lab.html','cycle-lab.html','theme-rotation.html','personal-data.html','api-status.html','sector-map.html','instrument.html','news-archive.html')
         for file in pages:
             s=(ROOT/'docs'/file).read_text(encoding='utf-8')
             self.assertIn('<html',s)
             self.assertIn('</body>',s)
         self.assertIn('news_history.json',(ROOT/'docs/index.html').read_text(encoding='utf-8'))
         self.assertIn('personal-data.html',(ROOT/'docs/index.html').read_text(encoding='utf-8'))
+        self.assertIn('theme-rotation.html',(ROOT/'docs/index.html').read_text(encoding='utf-8'))
         structure=(ROOT/'docs/structure-lab.html').read_text(encoding='utf-8')
         self.assertIn('structure_lab.json',structure)
         self.assertIn('id="currentBox"',structure)
@@ -42,11 +43,31 @@ class StaticSiteTests(unittest.TestCase):
         self.assertNotIn('TIINGO_API_TOKEN=',page)
         self.assertNotIn('TIINGO_API_TOKEN=',js)
         self.assertNotIn('TIINGO_API_TOKEN=',importer)
-        for ticker in ('SPY','QQQ','DIA','XLB','XLC','XLE','XLF','XLI','XLK','XLP','XLRE','XLU','XLV','XLY'):
+        all_tickers=('SPY','QQQ','DIA','XLB','XLC','XLE','XLF','XLI','XLK','XLP','XLRE','XLU','XLV','XLY','SMH','BOTZ','SKYY','CIBR','FINX','DRIV','LIT','ICLN','TAN','URA','ITA','XBI','ARKG','ESPO','PAVE')
+        for ticker in all_tickers:
             self.assertIn("'"+ticker+"'",js)
+            self.assertIn("'"+ticker+"'",importer)
+
+    def test_theme_rotation_page_and_worker(self):
+        page=(ROOT/'docs/theme-rotation.html').read_text(encoding='utf-8')
+        worker=(ROOT/'docs/personal-theme-worker.js').read_text(encoding='utf-8')
+        renderer=(ROOT/'docs/personal-theme-research.js').read_text(encoding='utf-8')
+        loader=(ROOT/'docs/theme-rotation-loader.js').read_text(encoding='utf-8')
+        self.assertIn('美股题材轮动研究',page)
+        self.assertIn('./personal-theme-research.js',page)
+        self.assertIn('./theme-rotation-loader.js',page)
+        self.assertIn('ACT_LAGS=[1,5,20]',worker)
+        self.assertIn('MAX_LAG=26',worker)
+        self.assertIn("SMH:'半导体'",worker)
+        self.assertIn("BOTZ:'机器人/AI'",worker)
+        self.assertIn('top_transitions',worker)
+        self.assertIn("new Worker('./personal-theme-worker.js')",renderer)
+        self.assertIn("DB_NAME='mrt-personal-local-data'",loader)
+        self.assertNotIn('localStorage',loader)
+        self.assertNotIn('sessionStorage',loader)
 
     def test_static_links_and_assets(self):
-        for file in ('index.html','research-hub.html','structure-lab.html','cycle-lab.html','personal-data.html','api-status.html','sector-map.html','instrument.html','news-archive.html'):
+        for file in ('index.html','research-hub.html','structure-lab.html','cycle-lab.html','theme-rotation.html','personal-data.html','api-status.html','sector-map.html','instrument.html','news-archive.html'):
             s=(ROOT/'docs'/file).read_text(encoding='utf-8')
             for target in re.findall(r'(?:(?:href|src)=)["\']([^"\']+)["\']',s):
                 if target.startswith(('http:','https:','#','data:')):continue
@@ -95,7 +116,7 @@ class StaticSiteTests(unittest.TestCase):
             self.assertEqual({r['id'] for r in snap.get('rows',[])},set(history['instruments']))
 
     def test_new_pages_do_not_embed_fake_market_history(self):
-        for file in ('index.html','sector-map.html','instrument.html','personal-data.html'):
+        for file in ('index.html','sector-map.html','instrument.html','personal-data.html','theme-rotation.html'):
             text=(ROOT/'docs'/file).read_text(encoding='utf-8').lower()
             self.assertNotIn('demo data',text)
             self.assertNotIn('mock data',text)
