@@ -52,11 +52,17 @@ class PersonalResearchTests(unittest.TestCase):
         worker = (ROOT / 'docs/personal-research-worker.js').read_text(encoding='utf-8')
         self.assertIn("ACT_LAGS=[1,5,20]", worker)
         self.assertIn('MAX_LAG=26', worker)
-        self.assertIn('RESAMPLES=200', worker)
+        self.assertIn('RESAMPLES=5000', worker)
+        self.assertIn('RETURN_PERM_BLOCK=4', worker)
+        self.assertIn('RETURN_BOOT_BLOCK=52', worker)
+        self.assertIn('FWD_HORIZONS=[5,10,20]', worker)
+        self.assertIn('HOT_ACTIVITY=80', worker)
         self.assertIn("detectScale(bars,'small',20,14)", worker)
         self.assertIn("detectScale(bars,'large',60,28)", worker)
         self.assertIn('shuffleBlocks', worker)
         self.assertIn('movingBootstrap', worker)
+        self.assertIn('conditionalResearch', worker)
+        self.assertIn('boxStateMap', worker)
         self.assertIn('q_research_global', worker)
         self.assertIn('block_permutation_p', worker)
         self.assertIn('bootstrap_ci95', worker)
@@ -67,6 +73,9 @@ class PersonalResearchTests(unittest.TestCase):
         self.assertIn('q<=.10', js)
         self.assertIn('spl.length>=2', js)
         self.assertIn('survives_research_wide_checks', js)
+        self.assertIn('renderConditional', js)
+        self.assertIn('conditionalResearchTable', js)
+        self.assertIn('e.data?.progress', js)
 
 
 if __name__ == '__main__':
