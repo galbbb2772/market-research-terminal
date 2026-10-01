@@ -20,21 +20,23 @@
 7. `tools/enrich_cycle_research.py` 已接入周期研究数据层：对行业 ETF 计算“周收益 − SPY周收益”的1–26周 Pearson 历史自相关，并保留每个滞后的有效样本对。相关峰值只能称为历史相关峰值，不能直接称为已验证周期。
 8. 周期研究同时生成4周相对SPY的横截面领导板块历史、领导权切换次数/切换率、中位连续领先周数、每周横截面覆盖，以及小/大箱体已结束样本的中位、均值、P25/P75/P90、最短/最长持续交易日。
 9. 活跃度轮动已实现：记录每日活跃度第一行业、Top 3、切换率、中位连续第一交易日，并计算1/5/20交易日行业活跃度横截面排名 Spearman 持续性。
-10. `tools/validate_cycle_research.py` 已加入严格周期验证层：三段连续历史时间切分、4周块置换近似双侧 p 值、4周 circular moving-block bootstrap 95%区间，以及 Benjamini-Hochberg FDR。
-11. 多重检验做两层修正：单行业26个滞后内 FDR，以及全部行业×滞后的全局 FDR。只有全局 q≤0.10 且至少三段历史中的两段相关方向与全样本一致，才标记 `survives_current_checks`；此标签仍只是研究候选，不是预测或交易信号。
-12. `docs/cycle-lab.html` 已展示1–26周自相关图、历史峰值、有效样本数、峰值块置换 p、行业/全局 q、95%块bootstrap区间、三段历史相关、严格验证汇总、4周相对SPY领导板块、活跃度轮动和箱体持续期分布。
-13. `tools/stage_data.py` 已兼容指数没有成交量的真实市场数据。
-14. 已有 Tiingo ETF 和 Massive 四大指数授权适配器。`refresh-licensed-etfs.yml` / `refresh-licensed-indices.yml` 在获授权后依次执行：合并真实历史 -> 生成箱体 -> 生成轮动描述 -> 严格周期验证 -> 生成市场快照 -> 仅提交获准公开的数据文件。
-15. 测试已覆盖箱体前视风险、空成交量、评分边界、周期描述、活跃度轮动、严格周期验证的FDR/bootstrap/时间切分，以及前端严格验证UI和无虚构数据要求。
-16. 2026-10-01 最新严格周期验证相关提交通过完整 GitHub Validate：Python编译、全部单元测试和前端 JavaScript 均成功。
+10. `tools/validate_cycle_research.py` 的收益周期严格验证层：三段连续历史时间切分、4周块置换近似双侧 p 值、4周 circular moving-block bootstrap 95%区间，以及 Benjamini-Hochberg FDR。
+11. 1/5/20日活跃度排名持续性已升级到同级严格验证：验证器从 `sector_history` 重建每天完整行业活跃度横截面，而不是只检验三个汇总均值；每个滞后记录平均 Spearman、有效日期对、三段连续历史均值、5交易日 block permutation p、5交易日 moving-block bootstrap 95%区间、活跃度家族 FDR q，以及收益周期+活跃度全部假设合并后的研究级全局 FDR q。
+12. 活跃度候选只有在研究级全局 q≤0.10，且至少三段历史中的两段与全样本 Spearman 方向一致时，才标记 `survives_current_checks`；否则标记 `not_supported_after_correction`。该标签仍只是历史研究候选，不是预测或交易信号。
+13. `docs/activity-validation.js` 已作为独立前端模块接入 `cycle-lab`，展示1/5/20日严格验证的 p/q/CI/三段均值/结论，并将原“活跃度显著性待增强”状态动态更新为已接入。
+14. `docs/cycle-lab.html` 已展示1–26周自相关图、历史峰值、有效样本数、峰值块置换 p、行业/全局 q、95%块bootstrap区间、三段历史相关、严格验证汇总、4周相对SPY领导板块、活跃度轮动和箱体持续期分布；严格活跃度验证模块在该页动态挂载。
+15. `tools/stage_data.py` 已兼容指数没有成交量的真实市场数据。
+16. 已有 Tiingo ETF 和 Massive 四大指数授权适配器。`refresh-licensed-etfs.yml` / `refresh-licensed-indices.yml` 在获授权后依次执行：合并真实历史 -> 生成箱体 -> 生成轮动描述 -> 严格周期/活跃度验证 -> 生成市场快照 -> 仅提交获准公开的数据文件。
+17. 测试已覆盖箱体前视风险、空成交量、评分边界、周期描述、活跃度轮动、收益周期严格验证，以及活跃度1/5/20日严格验证的FDR/bootstrap/时间切分/确定性；前端新模块也进入 `node --check`。
+18. 2026-10-01 最新活跃度严格显著性提交通过完整 GitHub Validate：Python编译、全部单元测试和前端 JavaScript 均成功。
 
 ## 尚未完成／不能假装已完成
 
 - 公开 `docs/data/market_history.json`、`docs/data/structure_lab.json`、`docs/data/market_snapshot.json` 仍须由**具备明确公开网站展示和静态缓存许可**的真实数据生成。仅拥有个人 API Key 并不等于拥有公开再分发权。
 - 行情获授权前，结构页和周期页会明确显示等待真实数据，不显示模拟箱体或模拟周期。
 - 社交/新闻题材关注度尚未接入。当前“行业活跃度”仍是量价代理，而非注意力数据。
-- 活跃度的1/5/20日 Spearman 目前仍是描述统计；尚未加入与周期自相关同等级的块方法/多重检验显著性验证。
 - 当前“时间切分”是历史稳定性检查，不等同于真正的滚动 walk-forward/OOS 预测检验；不能宣称未来预测能力。
+- 块置换、bootstrap 与 FDR 只提高历史依赖检验的严谨性，不等于因果证明，也不等于有可交易收益。
 - FRED完整宏观历史系列与宏观周期研究仍未完成。
 - 20/60日、14%/28%、评分公式尚未经独立统计/收益验证，不应宣称有预测力。
 
@@ -43,6 +45,6 @@
 1. 读取本文件和 `research/METHODS_CN.md`、`research/MARKET_DATA_CONTRACT_CN.md`；查看 `main` 最新提交及 Actions 的 Validate/Deploy 最新运行结果。
 2. 查看 `docs/data` 是否真实存在获授权市场 JSON。不要为了让网页有图而塞模拟数据。若尚未授权，先处理数据许可证及 GitHub Secrets/Variables；不要在聊天或前端粘贴 API Key。
 3. 检查 `structure-lab.html` 当前状态卡、周/月/年K缺失成交量、行业 ETF 活跃度表和历史箱体切换。
-4. 检查 `cycle-lab.html`：1–26周自相关、严格验证 p/q/CI/时间切分、4周相对SPY领导权、活跃度轮动与箱体持续期。任何通过项都只能称为“当前检验下保留候选”。
-5. 下一研究任务优先给“活跃度排名持续性”加严格显著性验证；之后可做真正 rolling walk-forward/OOS 稳定性研究。严格验证通过也不直接转成策略收益宣传。
-6. 授权配置完备后，通过既有工作流构建真实历史，并核验时间覆盖、标的数量、箱体数量、周期样本数、行业覆盖、验证假设数和延迟时间。
+4. 检查 `cycle-lab`：1–26周收益自相关、收益周期严格 p/q/CI/时间切分、4周相对SPY领导权、活跃度轮动、1/5/20日活跃度严格显著性、箱体持续期。任何通过项都只能称为“当前检验下保留候选”。
+5. 下一研究任务可进入真正 rolling walk-forward/OOS 稳定性研究，或返回第一页其余需求；严格验证通过也不直接转成策略收益宣传。
+6. 授权配置完备后，通过既有工作流构建真实历史，并核验时间覆盖、标的数量、箱体数量、周期样本数、行业覆盖、活跃度验证假设数和延迟时间。
