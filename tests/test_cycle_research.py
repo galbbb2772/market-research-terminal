@@ -23,6 +23,19 @@ def bars(mult=1.0, phase=0.0, n=520, volume=1_000_000):
     return out
 
 
+def activity_history(phase=0.0,n=180):
+    out=[]
+    day=dt.date(2025,1,2)
+    while len(out)<n:
+        if day.weekday()<5:
+            i=len(out)
+            score=50+38*math.sin(i/11+phase)
+            score=max(0,min(100,score))
+            out.append([day.isoformat(),score,score,score,0.0])
+        day+=dt.timedelta(days=1)
+    return out
+
+
 class CycleResearchTests(unittest.TestCase):
     def test_weekly_relative_returns_and_lags(self):
         s=bars(1.0,.8)
@@ -35,12 +48,12 @@ class CycleResearchTests(unittest.TestCase):
         self.assertGreaterEqual(lags[0]['pairs'],20)
         self.assertTrue(lags[0]['correlation'] is None or -1<=lags[0]['correlation']<=1)
 
-    def test_enrich_adds_sector_rotation_and_box_stats(self):
+    def test_enrich_adds_return_activity_and_box_research(self):
         structure={'schema':'STRUCTURE-LAB-V1','news_tension':[{'date':'2026-01-01'}],'instruments':{
             'SPY':{'group':'benchmark','bars':bars(1.0,0),'boxes':[]},
-            'XLK':{'group':'sector','bars':bars(1.0,.6),'boxes':[{'scale':'small','days':25,'end_at':'2025-01-01'}]},
-            'XLF':{'group':'sector','bars':bars(1.0,1.7),'boxes':[{'scale':'small','days':40,'end_at':'2025-02-01'},{'scale':'large','days':75,'end_at':'2025-03-01'}]},
-            'XLE':{'group':'sector','bars':bars(1.0,2.6),'boxes':[{'scale':'large','days':95,'end_at':'2025-04-01'}]},
+            'XLK':{'group':'sector','bars':bars(1.0,.6),'sector_history':activity_history(.2),'boxes':[{'scale':'small','days':25,'end_at':'2025-01-01'}]},
+            'XLF':{'group':'sector','bars':bars(1.0,1.7),'sector_history':activity_history(1.4),'boxes':[{'scale':'small','days':40,'end_at':'2025-02-01'},{'scale':'large','days':75,'end_at':'2025-03-01'}]},
+            'XLE':{'group':'sector','bars':bars(1.0,2.6),'sector_history':activity_history(2.8),'boxes':[{'scale':'large','days':95,'end_at':'2025-04-01'}]},
         }}
         out=enrich(structure)
         c=out['cycle_research']
@@ -52,5 +65,11 @@ class CycleResearchTests(unittest.TestCase):
         if c['leadership']['history']:
             self.assertIn(c['leadership']['latest']['leader'],{'XLK','XLF','XLE'})
             self.assertGreaterEqual(c['leadership']['switch_count'],0)
+        a=c['activity_rotation']
+        self.assertEqual(a['status'],'descriptive_volume_range_activity_rotation')
+        self.assertGreater(a['observations'],100)
+        self.assertEqual([x['lag_sessions'] for x in a['rank_persistence']],[1,5,20])
+        self.assertIn(a['latest']['leader'],{'XLK','XLF','XLE'})
+        self.assertTrue(all(x['pairs']>0 for x in a['rank_persistence']))
 
 if __name__=='__main__':unittest.main()
