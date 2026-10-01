@@ -29,11 +29,17 @@
 16. 已有 Tiingo ETF 和 Massive 四大指数授权适配器。`refresh-licensed-etfs.yml` / `refresh-licensed-indices.yml` 在获授权后依次执行：合并真实历史 -> 生成箱体 -> 生成轮动描述 -> 严格周期/活跃度验证 -> 生成市场快照 -> 仅提交获准公开的数据文件。
 17. 测试已覆盖箱体前视风险、空成交量、评分边界、周期描述、活跃度轮动、收益周期严格验证，以及活跃度1/5/20日严格验证的FDR/bootstrap/时间切分/确定性；前端新模块也进入 `node --check`。
 18. 2026-10-01 最新活跃度严格显著性提交通过完整 GitHub Validate：Python编译、全部单元测试和前端 JavaScript 均成功。
+19. 已核验 IEX HIST 官方历史数据条款：IEX 允许再分发 IEX historical data，但必须按条款注明 IEX 数据来源和条款链接。IEX HIST 是 IEX 场内数据，不能冒充全市场 SIP / 综合 OHLCV；原始 PCAP 单日体积巨大，因此作为公开可追溯参考源，不直接承担本项目长期综合 ETF 日K主源。
+20. 已核验 Tiingo Developer Program：软件可要求每个用户提供自己的 Tiingo API Token，并用该用户 Token 直接请求 Tiingo，而软件本身不再分发数据；这种 BYO Token 模式不需要开发者另取 redistribution licence，但必须遵守 Tiingo 开发者规则并清楚标注数据源。
+21. `docs/personal-data.html` + `docs/personal-tiingo.js` 已实现 Personal Real Data Mode：Token 只存在当前浏览器内存，不进 GitHub、不进 localStorage/sessionStorage、不写公开 JSON；页面直接请求 SPY / QQQ / DIA + 11 个 S&P 行业 ETF 的 Tiingo EOD，并在浏览器内计算最新收盘、1D、20/60日当前箱体状态与量价活跃度。
+22. `research/DATA_SOURCE_RIGHTS_CN.md` 已记录 IEX / Tiingo / Massive / Alpha Vantage / Nasdaq Data Link / FMP / Twelve Data / Stooq 的当前权限判断与用途边界。
+23. 私有真实数据验证已实际启动：通过 Massive 连接器取得 SPY / QQQ / DIA / XLK / XLF 各约501个真实日K；随后触发当前套餐 rate limit。Financial Datasets 当前余额为0，Longbridge 当前历史K线配额为0，因此均不作为本轮继续抓取路径。
 
 ## 尚未完成／不能假装已完成
 
-- 公开 `docs/data/market_history.json`、`docs/data/structure_lab.json`、`docs/data/market_snapshot.json` 仍须由**具备明确公开网站展示和静态缓存许可**的真实数据生成。仅拥有个人 API Key 并不等于拥有公开再分发权。
-- 行情获授权前，结构页和周期页会明确显示等待真实数据，不显示模拟箱体或模拟周期。
+- 公开 `docs/data/market_history.json`、`docs/data/structure_lab.json`、`docs/data/market_snapshot.json` 仍没有一套“综合美股 ETF EOD + 允许本站统一静态再分发”的长期主源。IEX HIST 虽具备可再分发路径，但仅代表 IEX 场内且 PCAP 过重；Tiingo 普通 API 若由本站统一缓存/再分发仍需单独 redistribution permission。
+- Personal Real Data Mode 的浏览器直连仍需在真实浏览器里验证 Tiingo API 的 CORS/网络表现；若被浏览器策略阻止，改用本机 `tools/fetch_licensed_etfs.py` 的 internal-only 输出路径，不降低授权要求。
+- 行情获授权前，公开结构页和周期页继续明确显示等待真实公开数据，不显示模拟箱体或模拟周期；个人模式与公开模式必须保持分离。
 - 社交/新闻题材关注度尚未接入。当前“行业活跃度”仍是量价代理，而非注意力数据。
 - 当前“时间切分”是历史稳定性检查，不等同于真正的滚动 walk-forward/OOS 预测检验；不能宣称未来预测能力。
 - 块置换、bootstrap 与 FDR 只提高历史依赖检验的严谨性，不等于因果证明，也不等于有可交易收益。
@@ -42,9 +48,10 @@
 
 ## 恢复步骤
 
-1. 读取本文件和 `research/METHODS_CN.md`、`research/MARKET_DATA_CONTRACT_CN.md`；查看 `main` 最新提交及 Actions 的 Validate/Deploy 最新运行结果。
-2. 查看 `docs/data` 是否真实存在获授权市场 JSON。不要为了让网页有图而塞模拟数据。若尚未授权，先处理数据许可证及 GitHub Secrets/Variables；不要在聊天或前端粘贴 API Key。
-3. 检查 `structure-lab.html` 当前状态卡、周/月/年K缺失成交量、行业 ETF 活跃度表和历史箱体切换。
-4. 检查 `cycle-lab`：1–26周收益自相关、收益周期严格 p/q/CI/时间切分、4周相对SPY领导权、活跃度轮动、1/5/20日活跃度严格显著性、箱体持续期。任何通过项都只能称为“当前检验下保留候选”。
-5. 下一研究任务可进入真正 rolling walk-forward/OOS 稳定性研究，或返回第一页其余需求；严格验证通过也不直接转成策略收益宣传。
-6. 授权配置完备后，通过既有工作流构建真实历史，并核验时间覆盖、标的数量、箱体数量、周期样本数、行业覆盖、活跃度验证假设数和延迟时间。
+1. 读取本文件、`research/DATA_SOURCE_RIGHTS_CN.md`、`research/METHODS_CN.md`、`research/MARKET_DATA_CONTRACT_CN.md`；查看 `main` 最新提交及 Actions 的 Validate/Deploy 最新运行结果。
+2. 优先验证 `docs/personal-data.html` 的 Tiingo BYO Token 浏览器直连。不要把 Token 发到聊天、提交 GitHub、写进 URL 日志或公开 JSON。
+3. 查看 `docs/data` 是否真实存在获授权市场 JSON。不要为了让网页有图而塞模拟数据。公开统一数据仍只接受明确 public-display / redistribution 权限。
+4. 检查 `structure-lab.html` 当前状态卡、周/月/年K缺失成交量、行业 ETF 活跃度表和历史箱体切换。
+5. 检查 `cycle-lab`：1–26周收益自相关、收益周期严格 p/q/CI/时间切分、4周相对SPY领导权、活跃度轮动、1/5/20日活跃度严格显著性、箱体持续期。任何通过项都只能称为“当前检验下保留候选”。
+6. 私有研究可继续利用允许的连接器数据验证算法；受限原始行情不得复制进公开 GitHub。
+7. 下一研究任务可进入真正 rolling walk-forward/OOS 稳定性研究，或返回第一页其余需求；严格验证通过也不直接转成策略收益宣传。
