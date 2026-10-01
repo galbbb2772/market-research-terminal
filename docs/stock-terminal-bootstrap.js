@@ -1,5 +1,6 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id);
+function addResearchLink(){let links=document.querySelector('.mp-links');if(links&&!links.querySelector('a[href="./stock-research.html"]')){let a=document.createElement('a');a.href='./stock-research.html';a.textContent='批量扫描/Alpha';links.appendChild(a)}}
 function correctHealthcareAutoMap(){let status=$('mappingStatus'),sector=$('sectorPick');if(!status||!sector||!status.textContent.includes('自动映射'))return;let themes=[...document.querySelectorAll('#themeChecks input:checked')].map(x=>x.value);if(sector.value==='XLK'&&(themes.includes('XBI')||themes.includes('ARKG'))){sector.value='XLV';status.innerHTML=status.innerHTML.replace('行业 XLK','行业 XLV')+' <span class="st-note">（生物科技/基因科技优先归入医疗保健）</span>';sector.dispatchEvent(new Event('change'))}}
 let status=$('mappingStatus');if(status)new MutationObserver(correctHealthcareAutoMap).observe(status,{childList:true,subtree:true,characterData:true});
 function loadQa(){if(document.querySelector('script[data-stock-interval-qa]'))return;let s=document.createElement('script');s.dataset.stockIntervalQa='1';s.src='./stock-interval-qa.js?v=20261001-v1';document.head.appendChild(s)}
@@ -7,5 +8,5 @@ function loadMacro(){if(document.querySelector('script[data-stock-macro-range]')
 function loadIntervalV2(){if(document.querySelector('script[data-stock-interval-v2]')){loadMacro();return}let s=document.createElement('script');s.dataset.stockIntervalV2='1';s.src='./stock-interval-v2.js?v=20261001-v4';s.onload=()=>{window.dispatchEvent(new Event('resize'));loadMacro()};s.onerror=loadMacro;document.head.appendChild(s)}
 function startAfterAdjustment(){Promise.resolve(window.__mrtSplitAdjustReady).catch(()=>[]).finally(()=>{loadIntervalV2();let q=(new URLSearchParams(location.search).get('symbol')||'').trim().toUpperCase();if(/^[A-Z0-9.\-]{1,12}$/.test(q)){let ticker=$('ticker');if(ticker)ticker.value=q;setTimeout(()=>{$('useSaved')?.click()},80)}})}
 function loadSplitAdjust(){if(document.querySelector('script[data-stock-split-adjust]')){startAfterAdjustment();return}let s=document.createElement('script');s.dataset.stockSplitAdjust='1';s.src='./stock-split-adjust-v1.js?v=20261001-v1';s.onload=startAfterAdjustment;s.onerror=()=>{window.__mrtSplitAdjustReady=Promise.resolve([]);startAfterAdjustment()};document.head.appendChild(s)}
-loadSplitAdjust();
+addResearchLink();loadSplitAdjust();
 })();
