@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const TICKERS=['SPY','QQQ','DIA','XLB','XLC','XLE','XLF','XLI','XLK','XLP','XLRE','XLU','XLV','XLY'];
+const TICKERS=['SPY','QQQ','DIA','XLB','XLC','XLE','XLF','XLI','XLK','XLP','XLRE','XLU','XLV','XLY','SMH','BOTZ','SKYY','CIBR','FINX','DRIV','LIT','ICLN','TAN','URA','ITA','XBI','ARKG','ESPO','PAVE'];
 const $=id=>document.getElementById(id);let cache={};
 function pct(v,arr){let x=arr.filter(Number.isFinite);if(!x.length||!Number.isFinite(v))return null;return 100*x.filter(n=>n<=v).length/x.length}
 function candidate(bars,window,maxWidth){if(bars.length<window)return null;let a=bars.slice(-window),upper=Math.max(...a.map(x=>x.h)),lower=Math.min(...a.map(x=>x.l));if(!(lower>0&&upper>lower))return null;let width=(upper/lower-1)*100;if(width>maxWidth)return null;let band=(upper-lower)*.12,ut=a.filter(x=>x.h>=upper-band).length,lt=a.filter(x=>x.l<=lower+band).length;if(ut<2||lt<2)return null;let close=bars.at(-1).c,pos=(close-lower)/(upper-lower)*100,zone=pos<=30?'底部区':pos>=70?'顶部区':'中部区';return{lower,upper,width,pos,zone,days:window,ut,lt}}
