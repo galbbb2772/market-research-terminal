@@ -8,10 +8,15 @@ class PersonalResearchTests(unittest.TestCase):
     def test_page_mounts_full_private_research_pipeline(self):
         page = (ROOT / 'docs/personal-data.html').read_text(encoding='utf-8')
         self.assertIn('./personal-research.js', page)
+        self.assertIn('./personal-tiingo.js', page)
+        self.assertIn('./personal-import.js', page)
+        self.assertIn('./personal-tiingo-fetch.py', page)
+        self.assertIn('id="bundleFile"', page)
         self.assertIn('id="personalBoxes"', page)
         self.assertIn('id="activityValidationTable"', page)
         self.assertIn('id="cycleValidationTable"', page)
         self.assertIn('完整真实市场研究链', page)
+        self.assertIn('本地 Tiingo Bundle', page)
 
     def test_token_never_enters_worker_payload(self):
         js = (ROOT / 'docs/personal-tiingo.js').read_text(encoding='utf-8')
@@ -21,10 +26,27 @@ class PersonalResearchTests(unittest.TestCase):
         self.assertIn("new Worker('./personal-research-worker.js')", research)
         self.assertIn('worker.postMessage({cache})', research)
         self.assertNotIn("$('token')", research)
-        self.assertNotIn('getElementById(\'token\')', research)
+        self.assertNotIn("getElementById('token')", research)
         self.assertNotIn('Authorization', research)
         self.assertNotIn('localStorage', research)
         self.assertNotIn('sessionStorage', research)
+
+    def test_local_bundle_import_has_no_token_dependency(self):
+        importer = (ROOT / 'docs/personal-import.js').read_text(encoding='utf-8')
+        tiingo = (ROOT / 'docs/personal-tiingo.js').read_text(encoding='utf-8')
+        helper = (ROOT / 'docs/personal-tiingo-fetch.py').read_text(encoding='utf-8')
+        self.assertIn('MRT-TIINGO-PERSONAL-BUNDLE-V1', importer)
+        self.assertIn("new CustomEvent('mrt-personal-import'", importer)
+        self.assertNotIn("$('token')", importer)
+        self.assertNotIn('Authorization', importer)
+        self.assertNotIn('localStorage', importer)
+        self.assertNotIn('sessionStorage', importer)
+        self.assertIn("addEventListener('mrt-personal-import'", tiingo)
+        self.assertIn('getpass.getpass', helper)
+        self.assertIn('Authorization', helper)
+        self.assertIn('MRT-TIINGO-PERSONAL-BUNDLE-V1', helper)
+        self.assertNotIn('"token":', helper)
+        self.assertNotIn("'token':", helper)
 
     def test_worker_matches_registered_research_parameters(self):
         worker = (ROOT / 'docs/personal-research-worker.js').read_text(encoding='utf-8')
