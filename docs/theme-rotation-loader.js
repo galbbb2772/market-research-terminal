@@ -1,0 +1,13 @@
+(()=>{'use strict';
+const $=id=>document.getElementById(id),DB_NAME='mrt-personal-local-data',STORE='bundles',KEY='default-tiingo-bundle',EXPECTED='MRT-TIINGO-PERSONAL-BUNDLE-V1';
+const THEMES=['SMH','BOTZ','SKYY','CIBR','FINX','DRIV','LIT','ICLN','TAN','URA','ITA','XBI','ARKG','ESPO','PAVE'];
+function normalize(rows){return (rows||[]).map(r=>({date:String(r.date).slice(0,10),o:+r.open,h:+r.high,l:+r.low,c:+r.close,v:+r.volume})).filter(r=>r.date&&[r.o,r.h,r.l,r.c,r.v].every(Number.isFinite)&&r.c>0).sort((a,b)=>a.date.localeCompare(b.date))}
+function openDB(){return new Promise((resolve,reject)=>{let req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(STORE))req.result.createObjectStore(STORE)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
+async function getSaved(){let db=await openDB();return new Promise((resolve,reject)=>{let tx=db.transaction(STORE,'readonly'),req=tx.objectStore(STORE).get(KEY);req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error)})}
+async function putSaved(bundle,fileName){let db=await openDB();return new Promise((resolve,reject)=>{let tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put({bundle,fileName,savedAt:new Date().toISOString()},KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}
+function validate(x){if(x?.schema!==EXPECTED)throw Error('不是本项目的 Tiingo Personal Bundle V1');if(x?.provider!=='Tiingo EOD')throw Error('数据源不是 Tiingo EOD');if(!x?.data||typeof x.data!=='object')throw Error('Bundle 缺少 data');return x}
+function runBundle(x,source){validate(x);let cache={};for(let s of ['SPY',...THEMES]){let bars=normalize(x.data?.[s]);if(bars.length)cache[s]=bars}let n=THEMES.filter(s=>cache[s]).length;$('themeBundleStatus').innerHTML=n>=10?`<span class="pd-ok">${source}</span>：题材ETF ${n}/15，${x.start||'—'} → ${x.end||'—'}，开始研究。`:`<span class="pd-bad">${source}</span>：只有题材ETF ${n}/15。你当前保存的是旧版14只ETF Bundle，需要用新版下载器重新生成一次。`;window.dispatchEvent(new CustomEvent('mrt-personal-data',{detail:{cache}}))}
+async function autoLoad(){try{let r=await getSaved();if(!r?.bundle){$('themeBundleStatus').textContent='本机还没有常用 Bundle。请先选择新版 tiingo_personal_bundle.json。';return}runBundle(r.bundle,'已自动读取常用 Bundle')}catch(e){$('themeBundleStatus').innerHTML='<span class="pd-bad">读取常用 Bundle 失败：</span>'+String(e?.message||e)}}
+$('themeBundleFile').addEventListener('change',async e=>{let file=e.target.files?.[0];if(!file)return;try{let x=validate(JSON.parse(await file.text()));await putSaved(x,file.name||'tiingo_personal_bundle.json');runBundle(x,'已导入并设为常用 Bundle')}catch(err){$('themeBundleStatus').innerHTML='<span class="pd-bad">导入失败：</span>'+String(err?.message||err)}});
+autoLoad();
+})();
