@@ -1,0 +1,17 @@
+{
+  "schema":"MRT-STRUCTURE-ENGINE-MANIFEST-V1",
+  "engine_version":"STRUCTURE-V2.1+MACRO1",
+  "status":"frozen_for_research",
+  "updated_at":"2026-10-01",
+  "layers":{
+    "small":{"window_sessions":45,"minimum_structure_sessions":30,"status":"frozen"},
+    "large":{"window_sessions":120,"minimum_structure_sessions":80,"status":"frozen"},
+    "macro":{"minimum_structure_sessions":180,"status":"research_layer"}
+  },
+  "forward_horizons_sessions":[1,3,5,10,20],
+  "price_basis_priority":["provider-adjusted","split-adjusted-fallback"],
+  "data_boundary":"individual-stock raw bars remain local under BYO-token mode",
+  "candidate_inputs":["stock_structure","stock_activity","sector_structure","sector_activity","theme_activity","SPY_regime","optional_frozen_signal"],
+  "outputs":["local_daily_candidates","local_alpha_validation","exportable_derived_json"],
+  "execution":"none"
+}
