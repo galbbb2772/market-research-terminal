@@ -1,0 +1,37 @@
+(()=>{'use strict';
+if(typeof CanvasRenderingContext2D==='undefined')return;
+const proto=CanvasRenderingContext2D.prototype;
+if(proto.__mrtBoxDensityPatched)return;
+proto.__mrtBoxDensityPatched=true;
+const native={clearRect:proto.clearRect,fillRect:proto.fillRect,strokeRect:proto.strokeRect,fillText:proto.fillText,beginPath:proto.beginPath};
+const states=new WeakMap(),expanded=new Set();
+const BOX_FILL=new Set(['#80b5ff1f','#f3c98720','#fff3aa55']);
+const BOX_STROKE=new Set(['#80b5ff','#f3c987']);
+const BOX_LABEL=new Set(['#9ac5ff','#f3d79f']);
+const norm=s=>String(s||'').toLowerCase();
+const isStock=ctx=>ctx?.canvas?.id==='stockChart';
+function state(ctx){let s=states.get(ctx);if(!s){s={boxes:[],pending:null,recording:false,flushed:false,drawn:[]};states.set(ctx,s)}return s}
+function reset(ctx){let s=state(ctx);s.boxes=[];s.pending=null;s.recording=false;s.flushed=false;s.drawn=[]}
+function rangeName(){return document.querySelector('#rangeButtons button.active')?.dataset.range||'1Y'}
+function isActiveRect(r,ctx){let right=r.x+r.w,edge=ctx.canvas.clientWidth-18;return right>=edge-26}
+function uniq(list){let seen=new Set;return list.filter(x=>{if(seen.has(x))return false;seen.add(x);return true})}
+function overlap(a,b){let iw=Math.max(0,Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x)),ih=Math.max(0,Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));if(!iw||!ih)return false;let tx=iw/Math.max(1,Math.min(a.w,b.w)),py=ih/Math.max(1,Math.min(a.h,b.h));return tx>=.68&&py>=.68}
+function clusterHistorical(items){let groups=[];for(let r of items){let g=groups.find(g=>g.some(x=>overlap(x,r)));g?g.push(r):groups.push([r])}return groups}
+function clusterKey(scale,members){return scale+':'+members.map(r=>r.label||`${Math.round(r.x)}-${Math.round(r.y)}-${Math.round(r.w)}-${Math.round(r.h)}`).join('|')}
+function selectVisible(ctx,s){let range=rangeName(),limits={
+'6M':{large:2,small:3},'1Y':{large:2,small:2},'3Y':{large:2,small:1},ALL:{large:3,small:0}
+}[range]||{large:2,small:2},chosen=[];
+for(let scale of ['large','small']){let all=s.boxes.filter(r=>r.scale===scale),active=all.filter(r=>isActiveRect(r,ctx)),hi=all.filter(r=>r.highlight),hist=all.filter(r=>!isActiveRect(r,ctx)&&!r.highlight),recent=hist.slice(-limits[scale]);chosen.push(...hi,...active.slice(-1),...recent)}
+return uniq(chosen)}
+function drawIndividual(ctx,r,kind){ctx.save();let active=kind==='active',hi=r.highlight;ctx.strokeStyle=r.scale==='large'?'#80b5ff':'#f3c987';ctx.lineWidth=hi?2.2:active?1.6:1;ctx.globalAlpha=hi?1:active?.92:.52;if(hi||active){ctx.fillStyle=hi?'#fff3aa40':r.scale==='large'?'#80b5ff12':'#f3c98712';native.fillRect.call(ctx,r.x,r.y,r.w,r.h)}native.strokeRect.call(ctx,r.x,r.y,r.w,r.h);if(hi||active){ctx.globalAlpha=1;ctx.fillStyle=r.scale==='large'?'#b9d7ff':'#f5ddb0';ctx.font='11px system-ui';native.fillText.call(ctx,r.label||`当前${r.scale==='large'?'大':'小'}箱体`,r.x+4,Math.max(31,r.y+12))}ctx.restore();return{...r,kind,labelText:r.label||`${r.scale==='large'?'大':'小'}箱体`}}
+function drawCluster(ctx,scale,members){let x=Math.min(...members.map(r=>r.x)),y=Math.min(...members.map(r=>r.y)),right=Math.max(...members.map(r=>r.x+r.w)),bottom=Math.max(...members.map(r=>r.y+r.h)),key=clusterKey(scale,members);if(expanded.has(key))return members.map(r=>drawIndividual(ctx,r,'history'));ctx.save();ctx.strokeStyle=scale==='large'?'#80b5ff':'#f3c987';ctx.lineWidth=1;ctx.globalAlpha=.55;ctx.setLineDash?.([5,4]);native.strokeRect.call(ctx,x,y,right-x,bottom-y);ctx.setLineDash?.([]);ctx.globalAlpha=.88;ctx.fillStyle=scale==='large'?'#9ac5ff':'#f3d79f';ctx.font='11px system-ui';let label=`${scale==='large'?'大':'小'}箱体簇 ×${members.length}`;native.fillText.call(ctx,label,x+4,Math.max(31,y+12));ctx.restore();return[{x,y,w:right-x,h:bottom-y,scale,kind:'cluster',count:members.length,key,labelText:label,members}]}
+function flush(ctx,s){if(s.flushed||!s.boxes.length)return;s.flushed=true;s.recording=false;let selected=selectVisible(ctx,s),drawn=[];for(let scale of ['large','small']){let part=selected.filter(r=>r.scale===scale),active=part.filter(r=>isActiveRect(r,ctx)),hi=part.filter(r=>r.highlight&&!active.includes(r)),hist=part.filter(r=>!active.includes(r)&&!hi.includes(r));for(let r of hi)drawn.push(drawIndividual(ctx,r,'highlight'));for(let r of active)drawn.push(drawIndividual(ctx,r,'active'));for(let g of clusterHistorical(hist)){if(g.length>1)drawn.push(...drawCluster(ctx,scale,g));else drawn.push(drawIndividual(ctx,g[0],'history'))}}s.drawn=drawn.flat().filter(Boolean)}
+proto.clearRect=function(...args){if(isStock(this))reset(this);return native.clearRect.apply(this,args)};
+proto.fillRect=function(x,y,w,h){if(isStock(this)&&BOX_FILL.has(norm(this.fillStyle))){let s=state(this),r={x,y,w,h,fill:norm(this.fillStyle),stroke:'',scale:'',highlight:norm(this.fillStyle)==='#fff3aa55',label:''};s.boxes.push(r);s.pending=r;s.recording=true;return}let s=isStock(this)?state(this):null;if(s?.recording&&!s.flushed)flush(this,s);return native.fillRect.call(this,x,y,w,h)};
+proto.strokeRect=function(x,y,w,h){if(isStock(this)&&BOX_STROKE.has(norm(this.strokeStyle))){let s=state(this),r=s.pending||s.boxes.at(-1);if(r){r.stroke=norm(this.strokeStyle);r.scale=r.stroke==='#80b5ff'?'large':'small';r.lineWidth=this.lineWidth}s.pending=null;s.recording=true;return}let s=isStock(this)?state(this):null;if(s?.recording&&!s.flushed)flush(this,s);return native.strokeRect.call(this,x,y,w,h)};
+proto.fillText=function(text,x,y,...rest){if(isStock(this)&&BOX_LABEL.has(norm(this.fillStyle))){let s=state(this),r=s.boxes.at(-1);if(r)r.label=String(text);return}let s=isStock(this)?state(this):null;if(s?.recording&&!s.flushed)flush(this,s);return native.fillText.call(this,text,x,y,...rest)};
+proto.beginPath=function(...args){let s=isStock(this)?state(this):null;if(s?.recording&&!s.flushed&&!BOX_STROKE.has(norm(this.strokeStyle)))flush(this,s);return native.beginPath.apply(this,args)};
+function hitRegion(canvas,e){let ctx=canvas.getContext('2d'),s=states.get(ctx);if(!s?.drawn?.length)return null,r=canvas.getBoundingClientRect(),sx=canvas.clientWidth/r.width,sy=canvas.clientHeight/r.height,x=(e.clientX-r.left)*sx,y=(e.clientY-r.top)*sy;return [...s.drawn].reverse().find(z=>x>=z.x&&x<=z.x+z.w&&y>=z.y&&y<=z.y+z.h)||null}
+function installUi(){let canvas=document.getElementById('stockChart'),hover=document.getElementById('stockHover');if(!canvas||canvas.dataset.densityUi)return;canvas.dataset.densityUi='1';let note=document.createElement('div');note.id='boxDensityNote';note.className='st-note';note.style.marginTop='6px';note.textContent='主图已开启精简显示：优先当前箱体与最近箱体；高重叠历史箱体自动折叠为“箱体簇 ×N”。完整历史仍保留在下方表格。';canvas.insertAdjacentElement('afterend',note);canvas.addEventListener('pointermove',e=>{let z=hitRegion(canvas,e);if(!z||!hover)return;let extra=z.kind==='cluster'?`${z.labelText}（点击展开/收起）`:z.kind==='active'?`当前${z.scale==='large'?'大':'小'}箱体${z.labelText?` · ${z.labelText}`:''}`:z.kind==='highlight'?`已选中${z.scale==='large'?'大':'小'}箱体${z.labelText?` · ${z.labelText}`:''}`:'';if(extra)setTimeout(()=>{if(!hover.textContent.includes(extra))hover.textContent+=` · ${extra}`},0)});canvas.addEventListener('click',e=>{let z=hitRegion(canvas,e);if(z?.kind!=='cluster')return;expanded.has(z.key)?expanded.delete(z.key):expanded.add(z.key);window.dispatchEvent(new Event('resize'))})}
+installUi();
+})();
