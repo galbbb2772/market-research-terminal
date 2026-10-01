@@ -21,15 +21,19 @@ class PersonalResearchTests(unittest.TestCase):
     def test_token_never_enters_worker_payload(self):
         js = (ROOT / 'docs/personal-tiingo.js').read_text(encoding='utf-8')
         research = (ROOT / 'docs/personal-research.js').read_text(encoding='utf-8')
+        strict_worker = (ROOT / 'docs/personal-research-worker-v2.js').read_text(encoding='utf-8')
         self.assertIn("detail:{cache}", js)
         self.assertNotIn('detail:{cache,token}', js)
-        self.assertIn("new Worker('./personal-research-worker.js')", research)
+        self.assertIn("new Worker('./personal-research-worker-v2.js')", research)
         self.assertIn('worker.postMessage({cache})', research)
         self.assertNotIn("$('token')", research)
         self.assertNotIn("getElementById('token')", research)
         self.assertNotIn('Authorization', research)
         self.assertNotIn('localStorage', research)
         self.assertNotIn('sessionStorage', research)
+        self.assertNotIn('Authorization', strict_worker)
+        self.assertNotIn('localStorage', strict_worker)
+        self.assertNotIn('sessionStorage', strict_worker)
 
     def test_local_bundle_import_has_no_token_dependency(self):
         importer = (ROOT / 'docs/personal-import.js').read_text(encoding='utf-8')
@@ -50,22 +54,24 @@ class PersonalResearchTests(unittest.TestCase):
 
     def test_worker_matches_registered_research_parameters(self):
         worker = (ROOT / 'docs/personal-research-worker.js').read_text(encoding='utf-8')
+        strict_worker = (ROOT / 'docs/personal-research-worker-v2.js').read_text(encoding='utf-8')
         self.assertIn("ACT_LAGS=[1,5,20]", worker)
         self.assertIn('MAX_LAG=26', worker)
         self.assertIn('RESAMPLES=5000', worker)
-        self.assertIn('RETURN_PERM_BLOCK=4', worker)
         self.assertIn('RETURN_BOOT_BLOCK=52', worker)
-        self.assertIn('FWD_HORIZONS=[5,10,20]', worker)
-        self.assertIn('HOT_ACTIVITY=80', worker)
         self.assertIn("detectScale(bars,'small',20,14)", worker)
         self.assertIn("detectScale(bars,'large',60,28)", worker)
         self.assertIn('shuffleBlocks', worker)
         self.assertIn('movingBootstrap', worker)
-        self.assertIn('conditionalResearch', worker)
-        self.assertIn('boxStateMap', worker)
         self.assertIn('q_research_global', worker)
         self.assertIn('block_permutation_p', worker)
         self.assertIn('bootstrap_ci95', worker)
+        self.assertIn('RESAMPLES=5000', strict_worker)
+        self.assertIn('movingClusterBootstrap', strict_worker)
+        self.assertIn('q_condition_family', strict_worker)
+        self.assertIn('split_excesses', strict_worker)
+        self.assertIn('cycle_survivors', strict_worker)
+        self.assertIn('applyResearchGlobal', strict_worker)
 
     def test_renderer_uses_research_wide_fdr_gate(self):
         js = (ROOT / 'docs/personal-research.js').read_text(encoding='utf-8')
@@ -73,9 +79,9 @@ class PersonalResearchTests(unittest.TestCase):
         self.assertIn('q<=.10', js)
         self.assertIn('spl.length>=2', js)
         self.assertIn('survives_research_wide_checks', js)
-        self.assertIn('renderConditional', js)
-        self.assertIn('conditionalResearchTable', js)
-        self.assertIn('e.data?.progress', js)
+        self.assertIn('q_condition_family', js)
+        self.assertIn('split_excesses', js)
+        self.assertIn('cycle_survivors', js)
 
 
 if __name__ == '__main__':
