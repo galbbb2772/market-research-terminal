@@ -1,7 +1,7 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id);
 const EXPECTED='MRT-TIINGO-PERSONAL-BUNDLE-V1';
-const ALLOWED=['SPY','QQQ','DIA','XLB','XLC','XLE','XLF','XLI','XLK','XLP','XLRE','XLU','XLV','XLY'];
+const ALLOWED=['SPY','QQQ','DIA','XLB','XLC','XLE','XLF','XLI','XLK','XLP','XLRE','XLU','XLV','XLY','SMH','BOTZ','SKYY','CIBR','FINX','DRIV','LIT','ICLN','TAN','URA','ITA','XBI','ARKG','ESPO','PAVE'];
 const DB_NAME='mrt-personal-local-data';
 const DB_VERSION=1;
 const STORE='bundles';
