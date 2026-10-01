@@ -7,12 +7,13 @@ from tools.build_market_snapshot import validate_history, canonical_ids
 
 class StaticSiteTests(unittest.TestCase):
     def test_sites_present_and_have_honest_status(self):
-        pages=('index.html','research-hub.html','structure-lab.html','cycle-lab.html','api-status.html','sector-map.html','instrument.html','news-archive.html')
+        pages=('index.html','research-hub.html','structure-lab.html','cycle-lab.html','personal-data.html','api-status.html','sector-map.html','instrument.html','news-archive.html')
         for file in pages:
             s=(ROOT/'docs'/file).read_text(encoding='utf-8')
             self.assertIn('<html',s)
             self.assertIn('</body>',s)
         self.assertIn('news_history.json',(ROOT/'docs/index.html').read_text(encoding='utf-8'))
+        self.assertIn('personal-data.html',(ROOT/'docs/index.html').read_text(encoding='utf-8'))
         structure=(ROOT/'docs/structure-lab.html').read_text(encoding='utf-8')
         self.assertIn('structure_lab.json',structure)
         self.assertIn('id="currentBox"',structure)
@@ -26,8 +27,21 @@ class StaticSiteTests(unittest.TestCase):
         self.assertIn('保留候选',cycle)
         self.assertIn('未获支持',cycle)
 
+    def test_personal_tiingo_mode_is_browser_private(self):
+        page=(ROOT/'docs/personal-data.html').read_text(encoding='utf-8')
+        js=(ROOT/'docs/personal-tiingo.js').read_text(encoding='utf-8')
+        self.assertIn('BYO TIINGO TOKEN',page)
+        self.assertIn('Token 不会保存',js)
+        self.assertIn("Authorization:'Token '+token",js)
+        self.assertNotIn('localStorage',js)
+        self.assertNotIn('sessionStorage',js)
+        self.assertNotIn('TIINGO_API_TOKEN=',page)
+        self.assertNotIn('TIINGO_API_TOKEN=',js)
+        for ticker in ('SPY','QQQ','DIA','XLB','XLC','XLE','XLF','XLI','XLK','XLP','XLRE','XLU','XLV','XLY'):
+            self.assertIn("'"+ticker+"'",js)
+
     def test_static_links_and_assets(self):
-        for file in ('index.html','research-hub.html','structure-lab.html','cycle-lab.html','api-status.html','sector-map.html','instrument.html','news-archive.html'):
+        for file in ('index.html','research-hub.html','structure-lab.html','cycle-lab.html','personal-data.html','api-status.html','sector-map.html','instrument.html','news-archive.html'):
             s=(ROOT/'docs'/file).read_text(encoding='utf-8')
             for target in re.findall(r'(?:(?:href|src)=)["\']([^"\']+)["\']',s):
                 if target.startswith(('http:','https:','#','data:')):continue
@@ -76,7 +90,7 @@ class StaticSiteTests(unittest.TestCase):
             self.assertEqual({r['id'] for r in snap.get('rows',[])},set(history['instruments']))
 
     def test_new_pages_do_not_embed_fake_market_history(self):
-        for file in ('index.html','sector-map.html','instrument.html'):
+        for file in ('index.html','sector-map.html','instrument.html','personal-data.html'):
             text=(ROOT/'docs'/file).read_text(encoding='utf-8').lower()
             self.assertNotIn('demo data',text)
             self.assertNotIn('mock data',text)
