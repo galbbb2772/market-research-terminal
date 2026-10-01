@@ -19,7 +19,7 @@ jobs:
           python -m py_compile tools/fetch_public_sources.py tools/stage_data.py \
             tools/fetch_licensed_etfs.py tools/fetch_licensed_indices.py \
             tools/merge_market_history.py tools/build_market_snapshot.py \
-            tools/build_structure_lab.py
+            tools/build_structure_lab.py tools/enrich_cycle_research.py
       - name: Verify website, offline adapters, licensing and historical snapshot calculations
         run: python -m unittest discover -s tests -v
       - name: Validate frontend JavaScript
