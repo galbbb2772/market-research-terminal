@@ -30,13 +30,18 @@ class StaticSiteTests(unittest.TestCase):
     def test_personal_tiingo_mode_is_browser_private(self):
         page=(ROOT/'docs/personal-data.html').read_text(encoding='utf-8')
         js=(ROOT/'docs/personal-tiingo.js').read_text(encoding='utf-8')
-        self.assertIn('BYO TIINGO TOKEN',page)
+        importer=(ROOT/'docs/personal-import.js').read_text(encoding='utf-8')
+        self.assertIn('PRIVATE TIINGO DATA',page)
+        self.assertIn('本地 Tiingo Bundle',page)
         self.assertIn('Token 不会保存',js)
         self.assertIn("Authorization:'Token '+token",js)
         self.assertNotIn('localStorage',js)
         self.assertNotIn('sessionStorage',js)
+        self.assertNotIn('localStorage',importer)
+        self.assertNotIn('sessionStorage',importer)
         self.assertNotIn('TIINGO_API_TOKEN=',page)
         self.assertNotIn('TIINGO_API_TOKEN=',js)
+        self.assertNotIn('TIINGO_API_TOKEN=',importer)
         for ticker in ('SPY','QQQ','DIA','XLB','XLC','XLE','XLF','XLI','XLK','XLP','XLRE','XLU','XLV','XLY'):
             self.assertIn("'"+ticker+"'",js)
 
