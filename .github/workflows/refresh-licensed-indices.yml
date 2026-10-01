@@ -36,6 +36,6 @@ jobs:
       - name: Save authorized market data
         run: |
           git config user.name 'github-actions[bot]'
-          git config user.email '41898282+galbbb2772@users.noreply.github.com'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add docs/data/market_history.json docs/data/structure_lab.json docs/data/market_snapshot.json
           if ! git diff --cached --quiet; then git commit -m 'Refresh licensed indices'; git push origin HEAD:main; fi
