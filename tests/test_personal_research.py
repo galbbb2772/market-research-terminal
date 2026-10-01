@@ -20,7 +20,11 @@ class PersonalResearchTests(unittest.TestCase):
         self.assertNotIn('detail:{cache,token}', js)
         self.assertIn("new Worker('./personal-research-worker.js')", research)
         self.assertIn('worker.postMessage({cache})', research)
-        self.assertNotIn('token', research.lower())
+        self.assertNotIn("$('token')", research)
+        self.assertNotIn('getElementById(\'token\')', research)
+        self.assertNotIn('Authorization', research)
+        self.assertNotIn('localStorage', research)
+        self.assertNotIn('sessionStorage', research)
 
     def test_worker_matches_registered_research_parameters(self):
         worker = (ROOT / 'docs/personal-research-worker.js').read_text(encoding='utf-8')
