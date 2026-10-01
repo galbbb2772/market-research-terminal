@@ -25,11 +25,11 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Validate frontend JavaScript
         run: |
-          for f in docs/research-terminal-v2.js docs/activity-validation.js docs/personal-tiingo.js docs/personal-import.js docs/personal-research.js docs/personal-research-worker.js docs/personal-research-worker-v2.js docs/home.js docs/sector-map.js docs/instrument.js docs/news-archive.js; do node --check "$f"; done
+          for f in docs/research-terminal-v2.js docs/activity-validation.js docs/personal-tiingo.js docs/personal-import.js docs/personal-research.js docs/personal-research-worker.js docs/personal-research-worker-v2.js docs/home.js docs/sector-map.js docs/instrument.js docs/news-archive.js docs/stock-terminal.js docs/stock-terminal-bootstrap.js docs/stock-interval-v2.js docs/stock-macro-range-v1.js docs/stock-load-progress.js docs/stock-split-adjust-v1.js docs/stock-structure-core.js docs/stock-research.js; do node --check "$f"; done
           python - <<'PYCODE'
           import re, subprocess
           from pathlib import Path
-          for item in ('index.html','research-hub.html','structure-lab.html','cycle-lab.html','personal-data.html','api-status.html','sector-map.html','instrument.html','news-archive.html'):
+          for item in ('index.html','research-hub.html','structure-lab.html','cycle-lab.html','personal-data.html','api-status.html','sector-map.html','instrument.html','news-archive.html','stock-terminal.html','stock-research.html'):
               html=(Path('docs')/item).read_text(encoding='utf-8')
               for text in re.findall(r'<script(?![^>]*src=)[^>]*>(.*?)</script>',html,re.S|re.I):
                   if text.strip():
