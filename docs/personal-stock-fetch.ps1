@@ -30,6 +30,20 @@ Write-Host "Fetching $Ticker EOD prices: $StartDate -> $EndDate ..."
 $prices = Invoke-RestMethod -Uri $pricesUrl -Headers $headers -Method Get
 if (-not $prices -or @($prices).Count -lt 1) { throw "Tiingo returned no EOD prices for $Ticker." }
 
+# Standardized price basis: use provider-adjusted OHLCV when available.
+$adjusted = @($prices | ForEach-Object {
+  $hasAdj = ($null -ne $_.adjOpen -and $null -ne $_.adjHigh -and $null -ne $_.adjLow -and $null -ne $_.adjClose)
+  [ordered]@{
+    date = $_.date
+    open = if ($hasAdj) { $_.adjOpen } else { $_.open }
+    high = if ($hasAdj) { $_.adjHigh } else { $_.high }
+    low = if ($hasAdj) { $_.adjLow } else { $_.low }
+    close = if ($hasAdj) { $_.adjClose } else { $_.close }
+    volume = if ($hasAdj -and $null -ne $_.adjVolume) { $_.adjVolume } else { $_.volume }
+    priceBasis = if ($hasAdj) { "provider-adjusted" } else { "raw-fallback" }
+  }
+})
+
 $fund = $null
 $daily = $null
 try { $fund = Invoke-RestMethod -Uri "https://api.tiingo.com/tiingo/fundamentals/$escaped/meta" -Headers $headers -Method Get } catch { Write-Host "Fundamentals metadata unavailable; continuing." -ForegroundColor Yellow }
@@ -47,10 +61,11 @@ $meta = [ordered]@{
 }
 
 $data = @{}
-$data[$Ticker] = @($prices)
+$data[$Ticker] = $adjusted
 $bundle = [ordered]@{
-  schema = "MRT-TIINGO-STOCK-BUNDLE-V1"
+  schema = "MRT-TIINGO-STOCK-BUNDLE-V2"
   provider = "Tiingo EOD"
+  price_basis = "provider-adjusted-first"
   symbol = $Ticker
   start = $StartDate
   end = $EndDate
