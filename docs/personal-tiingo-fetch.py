@@ -16,7 +16,11 @@ import urllib.request
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-TICKERS = ["SPY", "QQQ", "DIA", "XLB", "XLC", "XLE", "XLF", "XLI", "XLK", "XLP", "XLRE", "XLU", "XLV", "XLY"]
+TICKERS = [
+    "SPY", "QQQ", "DIA",
+    "XLB", "XLC", "XLE", "XLF", "XLI", "XLK", "XLP", "XLRE", "XLU", "XLV", "XLY",
+    "SMH", "BOTZ", "SKYY", "CIBR", "FINX", "DRIV", "LIT", "ICLN", "TAN", "URA", "ITA", "XBI", "ARKG", "ESPO", "PAVE",
+]
 
 
 def fetch_symbol(symbol: str, token: str, start: str, end: str):
@@ -27,7 +31,7 @@ def fetch_symbol(symbol: str, token: str, start: str, end: str):
         headers={
             "Authorization": f"Token {token}",
             "Accept": "application/json",
-            "User-Agent": "MarketResearchTerminal-Personal/1.0",
+            "User-Agent": "MarketResearchTerminal-Personal/1.1",
         },
     )
     try:
