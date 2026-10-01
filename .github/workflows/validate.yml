@@ -20,12 +20,12 @@ jobs:
             tools/fetch_licensed_etfs.py tools/fetch_licensed_indices.py \
             tools/merge_market_history.py tools/build_market_snapshot.py \
             tools/build_structure_lab.py tools/enrich_cycle_research.py \
-            tools/validate_cycle_research.py
+            tools/validate_cycle_research.py docs/personal-tiingo-fetch.py
       - name: Verify website, offline adapters, licensing and historical snapshot calculations
         run: python -m unittest discover -s tests -v
       - name: Validate frontend JavaScript
         run: |
-          for f in docs/research-terminal-v2.js docs/activity-validation.js docs/personal-tiingo.js docs/personal-research.js docs/personal-research-worker.js docs/home.js docs/sector-map.js docs/instrument.js docs/news-archive.js; do node --check "$f"; done
+          for f in docs/research-terminal-v2.js docs/activity-validation.js docs/personal-tiingo.js docs/personal-import.js docs/personal-research.js docs/personal-research-worker.js docs/home.js docs/sector-map.js docs/instrument.js docs/news-archive.js; do node --check "$f"; done
           python - <<'PYCODE'
           import re, subprocess
           from pathlib import Path
