@@ -1,6 +1,6 @@
 # Market Research Terminal｜可恢复研究检查点
 
-更新日期：2026-09-30。发生对话消息流错误时，以仓库 `main` 的真实文件和最新 GitHub Actions 为准，而不是依赖聊天上下文。
+更新日期：2026-10-01。发生对话消息流错误时，以仓库 `main` 的真实文件和最新 GitHub Actions 为准，而不是依赖聊天上下文。
 
 ## 当前唯一工作范围
 
@@ -17,22 +17,29 @@
 4. `tools/build_structure_lab.py`：从已取得的真实 `MARKET-HISTORY-V1` 自动构建 `STRUCTURE-LAB-V1`，不抓取/发明原始行情。20日小箱体宽度阈值14%，60日大箱体28%，上下边界各至少2次触碰；边界带为箱体高度12%。这些是待验证的研究启发式参数，不是经收益优化的定论。
 5. 箱体 `detected_at` 只在达到条件的那根日K收盘后确认；上下沿确认后固定，后续日K收盘突破时结束。已完成箱体最终评分属于事后描述，不能直接当历史实时特征使用。
 6. 行业 ETF 活跃度 = 当日成交金额相对前60个交易日百分位与日内振幅百分位的均值，0–100。不可称之为真实资金净流入、新闻热度或社交关注度。
-7. `tools/stage_data.py` 已兼容指数没有成交量的真实市场数据。
-8. 已有 Tiingo ETF 和 Massive 四大指数授权适配器，`refresh-licensed-etfs.yml` 和 `refresh-licensed-indices.yml` 会在获授权后从历史数据依次生成 `structure_lab.json` 和 `market_snapshot.json`。
-9. `tests/test_structure_builder.py` 测试未来数据不会把 `detected_at` 提前、空成交量、评分0–10。`tests/test_site.py` 保护当前状态页面和无虚构数据要求；已改为允许通过合法验证的公开行情文件入库。
+7. `tools/enrich_cycle_research.py` 已接入周期研究数据层：对行业 ETF 计算“周收益 − SPY周收益”的1–26周 Pearson 历史自相关，并保留每个滞后的有效样本对。相关峰值只能称为历史相关峰值，不能直接称为已验证周期。
+8. 周期研究同时生成4周相对SPY的横截面领导板块历史、领导权切换次数/切换率、中位连续领先周数、每周横截面覆盖，以及小/大箱体已结束样本的中位、均值、P25/P75/P90、最短/最长持续交易日。
+9. `docs/cycle-lab.html` 已展示1–26周自相关图、历史相关峰值（明确标记非周期结论）、有效样本数、4周相对SPY领导板块、领导权切换率/中位持续周数和箱体持续期分布。
+10. `tools/stage_data.py` 已兼容指数没有成交量的真实市场数据。
+11. 已有 Tiingo ETF 和 Massive 四大指数授权适配器。`refresh-licensed-etfs.yml` / `refresh-licensed-indices.yml` 在获授权后依次执行：合并真实历史 -> 生成箱体 -> 生成周期研究 -> 生成市场快照 -> 仅提交获准公开的数据文件。
+12. `tests/test_structure_builder.py` 测试未来数据不会把 `detected_at` 提前、空成交量、评分0–10；`tests/test_cycle_research.py` 测试周相对收益、1–26周滞后、领导权与箱体持续统计；`tests/test_site.py` 保护当前页面与无虚构数据要求。
+13. GitHub Validate 与 Pages Deploy 已恢复成功；2026-10-01 周期研究相关提交通过完整 CI。
 
 ## 尚未完成／不能假装已完成
 
 - 公开 `docs/data/market_history.json`、`docs/data/structure_lab.json`、`docs/data/market_snapshot.json` 仍须由**具备明确公开网站展示和静态缓存许可**的真实数据生成。仅拥有个人 API Key 并不等于拥有公开再分发权。
-- 行情获授权前，结构页会明确显示等待真实数据，不显示模拟箱体。
-- 社交/新闻题材关注度、FRED完整历史系列与行业轮动周期的统计检验尚未完成。当前行业活跃度是量价代理，而非注意力数据。
+- 行情获授权前，结构页和周期页会明确显示等待真实数据，不显示模拟箱体或模拟周期。
+- 社交/新闻题材关注度尚未接入。当前“行业活跃度”仍是量价代理，而非注意力数据。
+- 行业活跃度本身的轮动持续性/排名迁移尚待补充；当前周期模块主要研究相对收益轮动。
+- 周期严格统计检验尚未完成：时间外检验、块自助采样、多重检验修正仍为待做项。不能把1–26周中最大的相关值当成市场规律。
+- FRED完整宏观历史系列与宏观周期研究仍未完成。
 - 20/60日、14%/28%、评分公式尚未经独立统计/收益验证，不应宣称有预测力。
-- GitHub Pages 部署可能处于 `pending`；代码验证通过不代表最新页面已经发布。每次恢复先检查最新 Actions，再核对在线网站。
 
 ## 恢复步骤
 
 1. 读取本文件和 `research/METHODS_CN.md`、`research/MARKET_DATA_CONTRACT_CN.md`；查看 `main` 最新提交及 Actions 的 Validate/Deploy 最新运行结果。
 2. 查看 `docs/data` 是否真实存在获授权市场 JSON。不要为了让网页有图而塞模拟数据。若尚未授权，先处理数据许可证及 GitHub Secrets/Variables；不要在聊天或前端粘贴 API Key。
 3. 检查 `structure-lab.html` 当前状态卡、周/月/年K缺失成交量、行业 ETF 活跃度表和历史箱体切换。
-4. 如网页尚未部署，优先诊断 `Deploy research website` 的 queued/pending、仓库 Pages 环境与权限，再处理其他页面美化。
-5. 授权配置完备后，通过既有工作流构建真实历史，并核验其时间覆盖、标的数量、箱体数量和延迟时间。先描述性检验，再考虑周期统计，暂不做策略收益回测。
+4. 检查 `cycle-lab.html` 是否能读取 `cycle_research`：1–26周自相关、4周相对SPY领导权、箱体持续期；任何相关峰值必须保留“非周期结论”的提示。
+5. 下一代码任务优先补“活跃度本身的轮动/排名持续性”，之后再做时间外、块自助、多重检验；严格验证完成前不做策略收益宣传。
+6. 授权配置完备后，通过既有工作流构建真实历史，并核验时间覆盖、标的数量、箱体数量、周期样本数、行业覆盖和延迟时间。
