@@ -25,7 +25,7 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Validate frontend JavaScript
         run: |
-          for f in docs/research-terminal-v2.js docs/activity-validation.js docs/personal-tiingo.js docs/home.js docs/sector-map.js docs/instrument.js docs/news-archive.js; do node --check "$f"; done
+          for f in docs/research-terminal-v2.js docs/activity-validation.js docs/personal-tiingo.js docs/personal-research.js docs/personal-research-worker.js docs/home.js docs/sector-map.js docs/instrument.js docs/news-archive.js; do node --check "$f"; done
           python - <<'PYCODE'
           import re, subprocess
           from pathlib import Path
