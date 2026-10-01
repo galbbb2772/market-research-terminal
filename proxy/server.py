@@ -24,7 +24,7 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "MRTTiingoProxy/1.0"
 
     def log_message(self, fmt, *args):
-        # Never include request headers/tokens in logs.
+        # Tokens are carried in a request header, never in the URL/query string.
         super().log_message(fmt, *args)
 
     def _common_headers(self, status=200, content_type="application/json"):
@@ -62,11 +62,10 @@ class Handler(BaseHTTPRequestHandler):
             self._json_error(401, "missing Tiingo token")
             return
 
-        # Strip the local /tiingo prefix and never forward a token query parameter.
-        upstream_path = parsed.path[len("/tiingo"):]
+        # Keep Tiingo's /tiingo/... path intact. Never forward any token query parameter.
         q = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
         q = [(k, v) for k, v in q if k.lower() != "token"]
-        upstream_url = UPSTREAM + upstream_path
+        upstream_url = UPSTREAM + parsed.path
         if q:
             upstream_url += "?" + urllib.parse.urlencode(q)
 
@@ -102,7 +101,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
-        except Exception as e:
+        except Exception:
             self._json_error(502, "upstream request failed")
 
     def _json_error(self, status, message):
