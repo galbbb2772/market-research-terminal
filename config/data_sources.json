@@ -1,6 +1,6 @@
 {
-  "schema_version":"1.2",
-  "notes":"Current website scope is ETF + major indices only. No individual-stock or delisted-stock market database is required. Public/no-key macro, rates, liquidity, SEC mapping and recent GDELT coverage are refreshed automatically; exchange/vendor market-price history remains licensing-gated.",
+  "schema_version":"1.3",
+  "notes":"Current website scope is ETF + major indices only. No individual-stock or delisted-stock market database is required. Public/no-key macro, rates, liquidity, CFTC positioning and public news context are refreshed automatically; exchange/vendor market-price history remains licensing-gated.",
   "slots":{
     "market_history_daily":{
       "status":"license_blocked_public_site",
@@ -23,7 +23,7 @@
     },
     "official_public_bundle":{
       "status":"automated_daily",
-      "provider":"BLS / U.S. Treasury / Federal Reserve Board / NY Fed / World Bank / OECD / SEC / GDELT",
+      "provider":"BLS / U.S. Treasury / Federal Reserve Board / NY Fed / World Bank / OECD, with SEC/GDELT attempted fail-soft",
       "output":"docs/data/official_sources.json",
       "refresh":"daily GitHub Actions plus manual dispatch",
       "rights":"official/open public data only; source failures remain explicit"
@@ -40,16 +40,25 @@
       "coverage":"TGA operating cash, repo/reverse-repo operations, Fed assets, reserve balances, IORB and target range",
       "required":"provider,observation_date,retrieval_date,revision_or_history_type"
     },
+    "futures_positioning":{
+      "status":"automated_daily_source_weekly_data",
+      "provider":"U.S. Commodity Futures Trading Commission Public Reporting Environment",
+      "output":"docs/data/positioning_public.json",
+      "coverage":"selected financial futures positioning for major equity-index, U.S. dollar and 10Y Treasury contracts",
+      "metric":"contract counts and long-minus-short balances; not dollar flows or ETF flows"
+    },
     "sec_identifiers":{
-      "status":"automated_daily",
+      "status":"github_runner_blocked_optional",
       "provider":"U.S. SEC",
-      "output":"docs/data/sec_tickers.json"
+      "output":"docs/data/sec_tickers.json when upstream access succeeds",
+      "notes":"SEC currently returns HTTP 403 to the hosted GitHub runner. Full ticker mapping is not required for the present ETF/index website scope, so this remains fail-soft rather than blocking publication."
     },
     "news_recent":{
-      "status":"automated_daily",
-      "provider":"GDELT DOC 2.0",
-      "window":"rolling 3 months",
-      "metric":"aggregate topic coverage only; no article text republished"
+      "status":"automated_daily_with_fallbacks",
+      "provider":"GDELT DOC 2.0 plus Federal Reserve and BLS official RSS",
+      "output":"docs/data/news_public.json",
+      "window":"GDELT rolling 3 months; official RSS latest releases",
+      "metric":"GDELT aggregate topic coverage plus official release headlines/links only; no article bodies republished"
     },
     "news_deep_history":{
       "status":"needs_bulk_or_authenticated_warehouse_route",
