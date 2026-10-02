@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Fetch public news/event context without user API keys.
 
-Primary source: GDELT DOC 2.0 aggregate timelines.  If that service is unavailable,
+Primary source: GDELT DOC 2.0 aggregate timelines. If that service is unavailable,
 we still retain official Federal Reserve and BLS RSS headlines as policy/economic
-release context.  No article bodies are republished.
+release context. No article bodies are republished.
 """
 from __future__ import annotations
 
@@ -31,21 +31,22 @@ TOPICS = {
 }
 
 
-def request(url: str, *, timeout: int = 40, accept: str = "*/*") -> bytes:
+def request(url: str, *, timeout: int = 25, accept: str = "*/*", attempts: int = 2) -> bytes:
     last = None
-    for attempt in range(3):
+    for attempt in range(max(1, attempts)):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": accept})
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 return r.read()
         except Exception as exc:
             last = exc
-            if attempt < 2:
-                time.sleep(1.5 * (attempt + 1))
+            if attempt + 1 < max(1, attempts):
+                time.sleep(1.0 * (attempt + 1))
     raise last  # type: ignore[misc]
 
 
 def gdelt_one(query: str) -> tuple[list[dict[str, Any]], str]:
+    """Try GDELT quickly; RSS is the reliability fallback so GDELT must not stall CI."""
     errors = []
     for mode in ("timelinevolraw", "timelinevol"):
         params = urllib.parse.urlencode({
@@ -57,7 +58,7 @@ def gdelt_one(query: str) -> tuple[list[dict[str, Any]], str]:
         })
         url = GDELT + "?" + params
         try:
-            obj = json.loads(request(url, accept="application/json").decode("utf-8-sig"))
+            obj = json.loads(request(url, timeout=8, attempts=1, accept="application/json").decode("utf-8-sig"))
             timeline = obj.get("timeline") or []
             if not timeline:
                 errors.append(mode + ": empty timeline")
@@ -96,7 +97,7 @@ def fetch_gdelt() -> dict[str, Any]:
                 break
             except Exception as exc:
                 failures.setdefault(topic, []).append(f"{q}: {type(exc).__name__}: {str(exc)[:180]}")
-                time.sleep(0.4)
+                time.sleep(0.15)
         if got:
             series[topic] = got
     return {
@@ -106,7 +107,7 @@ def fetch_gdelt() -> dict[str, Any]:
         "window": "rolling 3 months",
         "series": series,
         "failures": failures,
-        "note": "Aggregate coverage proxy only; not a validated sentiment or trading signal.",
+        "note": "Aggregate coverage proxy only; not a validated sentiment or trading signal. GDELT uses a short fail-fast timeout because official RSS is the reliability fallback.",
     }
 
 
@@ -120,7 +121,6 @@ def text(node: ET.Element | None) -> str | None:
 def parse_feed(raw: bytes) -> list[dict[str, Any]]:
     root = ET.fromstring(raw)
     out = []
-    # RSS 2.0
     for item in root.findall(".//item"):
         title = text(item.find("title"))
         link = text(item.find("link"))
@@ -129,7 +129,6 @@ def parse_feed(raw: bytes) -> list[dict[str, Any]]:
             out.append({"title": title[:300], "url": link, "published": date})
     if out:
         return out[:100]
-    # Atom fallback
     ns = {"a": "http://www.w3.org/2005/Atom"}
     for item in root.findall(".//a:entry", ns):
         title = text(item.find("a:title", ns))
