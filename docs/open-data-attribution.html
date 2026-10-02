@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>开放行情数据来源与限制｜Market Research Terminal</title>
+<style>
+:root{color-scheme:dark;--bg:#081421;--card:#11263a;--line:#294860;--text:#eaf5fb;--muted:#9cb6c8;--ok:#63d2bd;--warn:#efc07d}*{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#14344b,#081421 48%);color:var(--text);font:14px/1.65 system-ui,-apple-system,"PingFang SC","Microsoft Yahei",sans-serif}.wrap{max-width:980px;margin:auto;padding:24px}.card{border:1px solid var(--line);background:#0f2437;border-radius:14px;padding:18px;margin:14px 0}h1{font-size:clamp(28px,5vw,44px);line-height:1.15}h2{font-size:20px}p,li{color:var(--muted)}a{color:#8de0d1}.warn{border-left:3px solid var(--warn);padding:10px 13px;background:#332b22;border-radius:0 10px 10px 0}.ok{color:var(--ok)}code{background:#071725;padding:2px 5px;border-radius:5px}.foot{margin-top:25px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}</style>
+</head>
+<body><main class="wrap">
+<a href="./index.html">← 返回研究总览</a>
+<h1>开放行情数据来源与限制</h1>
+<p>本页记录公开网站可再分发行情数据的许可、来源切换与研究限制。它是数据出处说明，不是交易建议。</p>
+<section class="card"><h2>HF Data Library</h2><p><b class="ok">许可：</b>Creative Commons Attribution 4.0 International（CC BY 4.0）。公开网站可以使用、再分发和制作衍生数据，但必须保留适当署名。</p><p><b>引用：</b>Elkassabgi, A. (2026). <i>HF Data Library: Free 1-Minute Intraday U.S. Equity Data</i>. Zenodo. DOI: 10.5281/zenodo.19501605.</p><p><a href="https://hfdatalibrary.com/pages/terms" target="_blank" rel="noopener">数据许可条款 ↗</a>　<a href="https://hfdatalibrary.com/pages/docs" target="_blank" rel="noopener">方法文档 ↗</a>　<a href="https://hfdatalibrary.com/pages/api" target="_blank" rel="noopener">API 文档 ↗</a></p></section>
+<section class="card"><h2>2022 年 3 月的数据源断点</h2><div class="warn"><b>这一点必须保留：</b>2022 年 3 月前后不是同一种市场覆盖。</div><ul><li><b>2022 年 3 月前：</b>HF Data Library 说明该段来自 PiTrading 的美国综合市场（consolidated tape）历史。</li><li><b>2022 年 3 月后：</b>来自 IEX Exchange HIST，仅覆盖 IEX 自身成交，不是全美综合市场。HF Data Library 文档估计 IEX 约占全市场成交量的 2–3%。</li><li>因此，后段的成交量、OHLC、振幅与基于成交量计算的活跃度，都不能解释为“全市场综合成交”。跨越 2022 年 3 月做长期比较时必须把这一结构变化纳入解释。</li></ul></section>
+<section class="card"><h2>IEX Historical Data 署名</h2><p>对 2022 年 3 月后的 IEX HIST 数据，本站保留下列原始署名：</p><p><b>Data provided for free by IEX. By accessing or using IEX Historical Data, you agree to the IEX Historical Data Terms of Use.</b></p></section>
+<section class="card"><h2>本站怎样使用</h2><ul><li>只接入本研究站定义的 ETF 范围，例如 SPY、QQQ、DIA 与 S&P 500 11 个行业 ETF；不会把 ETF 伪装成专有指数本身。</li><li>公开 JSON 的 <code>rights_status</code> 必须是 <code>verified_publishable</code> 才允许生成公开结构研究文件。</li><li>真正的 S&P 500、Nasdaq-100、Nasdaq Composite、DJIA 指数序列若没有明确公开展示/再分发许可，继续保持缺失，不使用伪造替代值。</li><li>所有历史结构、箱体、活跃度和周期统计只做描述性研究。</li></ul></section>
+<div class="foot">Market Research Terminal · Open-data provenance & attribution</div>
+</main></body></html>

@@ -1,0 +1,104 @@
+name: Refresh open ETF history
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 3 * * 2-6'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: open-etf-market-history-write
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check whether the free HF Data Library key is configured
+        id: gate
+        env:
+          HFDL_API_KEY: ${{ secrets.HFDL_API_KEY }}
+        run: |
+          if [ -n "$HFDL_API_KEY" ]; then
+            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+            echo 'HF Data Library key is configured.'
+          else
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+            echo 'HFDL_API_KEY is not configured; open ETF refresh is skipped.'
+          fi
+
+      - name: Validate open-data adapter and research builders
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          python -m py_compile tools/fetch_open_etfs_hfdl.py \
+            tools/build_structure_lab.py tools/enrich_cycle_research.py \
+            tools/validate_cycle_research.py tools/build_market_snapshot.py
+          python -m unittest tests.test_open_hfdl_etfs -v
+
+      - name: Fetch redistributable canonical ETF daily history
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          HFDL_API_KEY: ${{ secrets.HFDL_API_KEY }}
+        run: |
+          set -euo pipefail
+          python tools/fetch_open_etfs_hfdl.py \
+            --start 2019-01-01 \
+            --output docs/data/market_history.json \
+            --publish
+
+      - name: Build public structure, cycle and snapshot data
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          python tools/build_structure_lab.py \
+            --input docs/data/market_history.json \
+            --output docs/data/structure_lab.json \
+            --publish
+          python tools/enrich_cycle_research.py \
+            --input docs/data/structure_lab.json
+          python tools/validate_cycle_research.py \
+            --input docs/data/structure_lab.json
+          python tools/build_market_snapshot.py \
+            --input docs/data/market_history.json \
+            --structure docs/data/structure_lab.json \
+            --output docs/data/market_snapshot.json \
+            --publish
+
+      - name: Verify required ETF coverage and attribution
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          python - <<'PY'
+          import json
+          h=json.load(open('docs/data/market_history.json',encoding='utf-8'))
+          required={'SPY','QQQ','DIA','XLB','XLC','XLE','XLF','XLI','XLK','XLP','XLRE','XLU','XLV','XLY'}
+          present=set(h.get('instruments',{}))
+          missing=sorted(required-present)
+          assert h.get('rights_status')=='verified_publishable', h.get('rights_status')
+          assert not missing, f'missing required ETFs: {missing}'
+          attr=h.get('attribution') or {}
+          assert 'CC BY 4.0' in (attr.get('hf_license') or '')
+          assert 'Data provided for free by IEX' in (attr.get('iex_notice') or '')
+          print('OPEN_ETF_RESULT',len(present),'symbols',h.get('provider'))
+          print('OPTIONAL_FAILURES',h.get('failed_optional_instruments',{}))
+          PY
+
+      - name: Commit open-licensed website market data
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/data/market_history.json docs/data/structure_lab.json docs/data/market_snapshot.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Refresh open-licensed ETF market history'
+            git push origin HEAD:main
+          fi
