@@ -12,7 +12,6 @@ import json
 import math
 import urllib.parse
 import urllib.request
-from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -31,7 +30,7 @@ TARGETS = {
 }
 
 
-def get_json(url: str, timeout: int = 45) -> Any:
+def get_json(url: str, timeout: int = 20) -> Any:
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8-sig"))
@@ -78,7 +77,7 @@ def compact(row: dict[str, Any]) -> dict[str, Any]:
 
 def query(term: str) -> list[dict[str, Any]]:
     params = urllib.parse.urlencode({
-        "$limit": "5000",
+        "$limit": "3000",
         "$order": "report_date_as_yyyy_mm_dd DESC",
         "$q": term,
     })
@@ -92,9 +91,6 @@ def choose_contract(rows: list[dict[str, Any]], aliases: list[str]) -> tuple[str
     if not prepared:
         return None, []
 
-    # Prefer contracts whose names explicitly match the target aliases, then choose
-    # the contract with the largest latest reported open interest. This avoids
-    # summing contracts with different multipliers (e.g. E-mini and Micro).
     matched = [r for r in prepared if any(a.upper() in str(r.get("contract", "")).upper() or
                                           a.upper() in str(r.get("commodity", "")).upper()
                                           for a in aliases)]
@@ -119,13 +115,15 @@ def choose_contract(rows: list[dict[str, Any]], aliases: list[str]) -> tuple[str
 def fetch_target(name: str, aliases: list[str]) -> dict[str, Any]:
     errors = []
     merged: list[dict[str, Any]] = []
-    # Try the most specific search strings first. Socrata search is intentionally
-    # broad, so contract selection is repeated locally afterwards.
+    # The first broad alias normally returns both standard and mini contracts.
+    # Stop after the first non-empty search; local contract selection then chooses
+    # the latest highest-open-interest match. Fallback aliases are only for misses.
     for term in aliases:
         try:
             rows = query(term)
             if rows:
                 merged.extend(rows)
+                break
         except Exception as exc:
             errors.append(f"{term}: {type(exc).__name__}: {str(exc)[:120]}")
     contract, rows = choose_contract(merged, aliases)
