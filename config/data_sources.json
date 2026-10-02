@@ -1,16 +1,17 @@
 {
-  "schema_version":"1.1",
-  "notes":"Current website scope is ETF + major indices only. No individual-stock or delisted-stock market database is required.",
+  "schema_version":"1.2",
+  "notes":"Current website scope is ETF + major indices only. No individual-stock or delisted-stock market database is required. Public/no-key macro, rates, liquidity, SEC mapping and recent GDELT coverage are refreshed automatically; exchange/vendor market-price history remains licensing-gated.",
   "slots":{
     "market_history_daily":{
-      "status":"not_connected",
+      "status":"license_blocked_public_site",
       "provider":null,
       "scope":"SPY, QQQ, DIA, S&P 500, Nasdaq-100, Nasdaq Composite, DJIA, S&P sector ETFs, verified Nasdaq sector trackers, verified Dow Jones U.S. sector indices",
       "required":"date,open,high,low,close,volume|null,adjusted_close|null,provider_symbol,source_provenance,adjustment,rights_status",
-      "public_rule":"Only verified_publishable data may be written to docs/data/market_history.json"
+      "public_rule":"Only verified_publishable data may be written to docs/data/market_history.json",
+      "fallback":"Use the existing personal/local import path for non-display vendor data until a public-display licence is supplied."
     },
     "market_snapshot":{
-      "status":"not_connected",
+      "status":"waiting_for_licensed_market_history",
       "provider":null,
       "required":"id,date,close,return_1d,return_5d,return_20d,volatility_20d,drawdown_from_peak,relative_to_spy_20d,activity_score,range_box_state",
       "public_rule":"Derived only from approved market history or another approved display source"
@@ -20,20 +21,40 @@
       "provider":"canonical market_universe.json",
       "notes":"S&P 500 11-sector ETFs are mapped. Nasdaq-100 and Dow Jones U.S. sector codes are added only after exact official mapping is verified."
     },
+    "official_public_bundle":{
+      "status":"automated_daily",
+      "provider":"BLS / U.S. Treasury / Federal Reserve Board / NY Fed / World Bank / OECD / SEC / GDELT",
+      "output":"docs/data/official_sources.json",
+      "refresh":"daily GitHub Actions plus manual dispatch",
+      "rights":"official/open public data only; source failures remain explicit"
+    },
     "macro_monthly":{
-      "status":"connected_via_official_public_sources",
-      "provider":"BLS/Treasury/Federal Reserve/NY Fed/OECD/World Bank and other official sources",
+      "status":"automated_daily_from_official_public_sources",
+      "provider":"BLS/Treasury/Federal Reserve/OECD/World Bank",
       "required":"provider,unit,frequency,observation_date,release_date,revision"
     },
-    "financial_conditions_weekly":{
-      "status":"candidate_expansion",
-      "provider":"official Federal Reserve / Chicago Fed / NY Fed sources",
-      "required":"provider,release_date,weekly_observation_date"
+    "financial_conditions_and_liquidity":{
+      "status":"automated_daily",
+      "provider":"U.S. Treasury Fiscal Data / NY Fed / Federal Reserve public series",
+      "output":"docs/data/liquidity_public.json",
+      "coverage":"TGA operating cash, repo/reverse-repo operations, Fed assets, reserve balances, IORB and target range",
+      "required":"provider,observation_date,retrieval_date,revision_or_history_type"
     },
-    "news_archive":{
-      "status":"archived_local_only",
-      "provider":"prior market-indicators-v1 derived archive",
-      "release_rights":"requires review"
+    "sec_identifiers":{
+      "status":"automated_daily",
+      "provider":"U.S. SEC",
+      "output":"docs/data/sec_tickers.json"
+    },
+    "news_recent":{
+      "status":"automated_daily",
+      "provider":"GDELT DOC 2.0",
+      "window":"rolling 3 months",
+      "metric":"aggregate topic coverage only; no article text republished"
+    },
+    "news_deep_history":{
+      "status":"needs_bulk_or_authenticated_warehouse_route",
+      "provider":"GDELT bulk Event/GKG or licensed/archive source",
+      "notes":"DOC 2.0 is only a rolling recent window; deep history needs a separate bulk ingestion route rather than pretending the recent API covers old dates."
     }
   }
 }
