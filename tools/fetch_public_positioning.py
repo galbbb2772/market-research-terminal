@@ -2,7 +2,9 @@
 """Fetch no-key CFTC Commitments of Traders positioning for market context.
 
 This connector uses the CFTC Public Reporting Environment (Socrata) and keeps a
-small set of financial-futures series useful for descriptive market research.
+small set of explicitly pinned financial-futures contracts useful for descriptive
+market research. Contract codes are pinned deliberately: broad text search can
+otherwise match similarly named dividend products or the wrong Treasury maturity.
 It does not create a trading signal and it does not use exchange price data.
 """
 from __future__ import annotations
@@ -20,13 +22,16 @@ BASE = "https://publicreporting.cftc.gov/resource/gpe5-46if.json"
 UA = "MarketResearchTerminal/1.0 (+https://github.com/galbbb2772/market-research-terminal)"
 NOW = lambda: datetime.now(timezone.utc)
 
+# CFTC contract-market codes from the official TFF Futures Only dataset.
+# We intentionally choose the liquid mini/index contracts rather than a fuzzy
+# commodity-name match. Expected labels are assertions against accidental remaps.
 TARGETS = {
-    "sp500": ["S&P 500", "E-MINI S&P"],
-    "nasdaq100": ["NASDAQ-100", "NASDAQ MINI"],
-    "dow": ["DOW JONES INDUSTRIAL", "DJIA"],
-    "russell2000": ["RUSSELL 2000"],
-    "usd_index": ["U.S. DOLLAR INDEX", "USD INDEX"],
-    "us10y": ["10-YEAR U.S. TREASURY", "10 YEAR U.S. TREASURY", "10-YEAR TREASURY"],
+    "sp500": {"code": "13874A", "expected": "E-MINI S&P 500"},
+    "nasdaq100": {"code": "209742", "expected": "NASDAQ MINI"},
+    "dow": {"code": "124603", "expected": "DJIA x $5"},
+    "russell2000": {"code": "239742", "expected": "RUSSELL E-MINI"},
+    "usd_index": {"code": "098662", "expected": "USD INDEX"},
+    "us10y": {"code": "043602", "expected": "UST 10Y NOTE"},
 }
 
 
@@ -48,6 +53,7 @@ def compact(row: dict[str, Any]) -> dict[str, Any]:
     out: dict[str, Any] = {
         "date": str(row.get("report_date_as_yyyy_mm_dd") or "")[:10],
         "contract": row.get("contract_market_name") or row.get("market_and_exchange_names"),
+        "contract_code": row.get("cftc_contract_market_code"),
         "commodity": row.get("commodity_name"),
         "open_interest": num(row.get("open_interest_all")),
     }
@@ -75,71 +81,58 @@ def compact(row: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def query(term: str) -> list[dict[str, Any]]:
+def query_contract_code(code: str) -> list[dict[str, Any]]:
+    # Exact Socrata filter prevents a search for "10-year" from selecting 5Y or a
+    # search for "Russell 2000" from selecting an annual-dividend derivative.
     params = urllib.parse.urlencode({
         "$limit": "3000",
         "$order": "report_date_as_yyyy_mm_dd DESC",
-        "$q": term,
+        "$where": f"cftc_contract_market_code='{code}'",
     })
     obj = get_json(BASE + "?" + params)
     return [r for r in obj if isinstance(r, dict)] if isinstance(obj, list) else []
 
 
-def choose_contract(rows: list[dict[str, Any]], aliases: list[str]) -> tuple[str | None, list[dict[str, Any]]]:
-    prepared = [compact(r) for r in rows]
-    prepared = [r for r in prepared if r.get("date") and r.get("contract")]
-    if not prepared:
-        return None, []
-
-    matched = [r for r in prepared if any(a.upper() in str(r.get("contract", "")).upper() or
-                                          a.upper() in str(r.get("commodity", "")).upper()
-                                          for a in aliases)]
-    pool = matched or prepared
-    latest_by_contract: dict[str, dict[str, Any]] = {}
-    for r in pool:
-        name = str(r["contract"])
-        old = latest_by_contract.get(name)
-        if old is None or r["date"] > old["date"]:
-            latest_by_contract[name] = r
-    if not latest_by_contract:
-        return None, []
-    selected = max(latest_by_contract, key=lambda n: (latest_by_contract[n].get("open_interest") or -1.0))
-    series = [r for r in pool if r.get("contract") == selected]
-    by_date: dict[str, dict[str, Any]] = {}
-    for r in series:
-        by_date[r["date"]] = r
-    out = [by_date[d] for d in sorted(by_date)]
-    return selected, out
-
-
-def fetch_target(name: str, aliases: list[str]) -> dict[str, Any]:
-    errors = []
-    merged: list[dict[str, Any]] = []
-    # The first broad alias normally returns both standard and mini contracts.
-    # Stop after the first non-empty search; local contract selection then chooses
-    # the latest highest-open-interest match. Fallback aliases are only for misses.
-    for term in aliases:
-        try:
-            rows = query(term)
-            if rows:
-                merged.extend(rows)
-                break
-        except Exception as exc:
-            errors.append(f"{term}: {type(exc).__name__}: {str(exc)[:120]}")
-    contract, rows = choose_contract(merged, aliases)
-    if not rows:
-        return {"status": "error", "errors": errors or ["no rows returned"]}
-    latest = rows[-1]
-    return {
-        "status": "ok",
-        "selected_contract": contract,
-        "observation_count": len(rows),
-        "start": rows[0]["date"],
-        "end": rows[-1]["date"],
-        "latest": latest,
-        "observations": rows,
-        "search_errors": errors,
-    }
+def fetch_target(name: str, spec: dict[str, str]) -> dict[str, Any]:
+    code = spec["code"]
+    expected = spec["expected"]
+    try:
+        raw = query_contract_code(code)
+        rows = [compact(r) for r in raw]
+        rows = [r for r in rows if r.get("date") and r.get("contract")]
+        if not rows:
+            raise ValueError(f"contract code {code} returned no usable rows")
+        wrong_codes = sorted({str(r.get("contract_code")) for r in rows if str(r.get("contract_code")) != code})
+        if wrong_codes:
+            raise ValueError(f"contract-code filter leaked other codes: {wrong_codes[:5]}")
+        latest_name = str(rows[0].get("contract") or "")
+        if expected.upper() not in latest_name.upper():
+            raise ValueError(
+                f"contract code {code} latest label {latest_name!r} does not match expected {expected!r}"
+            )
+        by_date: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            by_date[row["date"]] = row
+        observations = [by_date[d] for d in sorted(by_date)]
+        latest = observations[-1]
+        return {
+            "status": "ok",
+            "contract_code": code,
+            "selected_contract": latest.get("contract"),
+            "expected_contract_label": expected,
+            "observation_count": len(observations),
+            "start": observations[0]["date"],
+            "end": observations[-1]["date"],
+            "latest": latest,
+            "observations": observations,
+        }
+    except Exception as exc:
+        return {
+            "status": "error",
+            "contract_code": code,
+            "expected_contract_label": expected,
+            "error": f"{type(exc).__name__}: {str(exc)[:260]}",
+        }
 
 
 def main() -> None:
@@ -147,7 +140,7 @@ def main() -> None:
     ap.add_argument("--output", default="docs/data/positioning_public.json")
     args = ap.parse_args()
 
-    targets = {name: fetch_target(name, aliases) for name, aliases in TARGETS.items()}
+    targets = {name: fetch_target(name, spec) for name, spec in TARGETS.items()}
     ok_count = sum(1 for v in targets.values() if v.get("status") == "ok")
     payload = {
         "schema": "CFTC-POSITIONING-V1",
@@ -165,15 +158,16 @@ def main() -> None:
         "notes": [
             "Position counts are futures contracts, not dollars and not ETF share flows.",
             "Long-minus-short values are descriptive positioning balances only.",
-            "The highest-open-interest matching contract is selected instead of summing differently sized contracts.",
+            "Each target is pinned to a documented CFTC contract-market code; no fuzzy contract-name selection is used.",
         ],
     }
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    if ok_count < 2:
-        raise SystemExit(f"Only {ok_count}/{len(targets)} CFTC targets succeeded")
-    print(f"Wrote {out}: {ok_count}/{len(targets)} CFTC targets ok")
+    if ok_count < len(TARGETS):
+        failures = {k: v.get("error") for k, v in targets.items() if v.get("status") != "ok"}
+        raise SystemExit(f"Only {ok_count}/{len(targets)} pinned CFTC targets succeeded: {failures}")
+    print(f"Wrote {out}: {ok_count}/{len(targets)} pinned CFTC targets ok")
 
 
 if __name__ == "__main__":
