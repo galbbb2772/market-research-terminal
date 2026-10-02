@@ -32,8 +32,6 @@ jobs:
       - name: Compile public connectors
         run: python -m py_compile tools/fetch_public_sources.py tools/fetch_public_liquidity.py
       - name: Fetch official/open sources
-        env:
-          SEC_USER_AGENT: MarketResearchTerminal/1.0 contact-via-github
         run: |
           set -euo pipefail
           python tools/fetch_public_sources.py \
@@ -59,7 +57,8 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add docs/data/official_sources.json docs/data/sec_tickers.json docs/data/liquidity_public.json
+          git add docs/data/official_sources.json docs/data/liquidity_public.json
+          if [ -f docs/data/sec_tickers.json ]; then git add docs/data/sec_tickers.json; fi
           if ! git diff --cached --quiet; then
             git commit -m 'Refresh official public research data'
             git push origin HEAD:main
