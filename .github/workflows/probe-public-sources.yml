@@ -1,30 +1,66 @@
-name: Probe official public sources
+name: Refresh official public sources
+
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'tools/fetch_public_sources.py'
+      - 'tools/fetch_public_liquidity.py'
       - '.github/workflows/probe-public-sources.yml'
+  schedule:
+    - cron: '35 12 * * *'
+
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: official-public-sources-write
+  cancel-in-progress: false
+
 jobs:
-  probe:
+  refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Fetch and validate public sources
-        run: python tools/fetch_public_sources.py --output /tmp/official_sources.json --sec-output /tmp/sec_tickers.json --require-min-ok 4
+      - name: Compile public connectors
+        run: python -m py_compile tools/fetch_public_sources.py tools/fetch_public_liquidity.py
+      - name: Fetch official/open sources
+        env:
+          SEC_USER_AGENT: MarketResearchTerminal/1.0 contact-via-github
+        run: |
+          set -euo pipefail
+          python tools/fetch_public_sources.py \
+            --output docs/data/official_sources.json \
+            --sec-output docs/data/sec_tickers.json \
+            --require-min-ok 4
+          python tools/fetch_public_liquidity.py --output docs/data/liquidity_public.json
       - name: Print compact source status
         run: |
           python - <<'PY'
           import json
-          d=json.load(open('/tmp/official_sources.json',encoding='utf-8'))
+          d=json.load(open('docs/data/official_sources.json',encoding='utf-8'))
           print('SOURCE_RESULT',d['ok_count'],'/',d['source_count'])
           for k,v in d['sources'].items():
               print(k, v.get('status'), v.get('error',''))
+          q=json.load(open('docs/data/liquidity_public.json',encoding='utf-8'))
+          print('LIQUIDITY_RESULT',q.get('ok_count'),'/',q.get('source_count'))
+          for k,v in q.get('sources',{}).items():
+              print('liquidity:'+k, v.get('status'), v.get('error',''))
           PY
+      - name: Commit only public static research data
+        if: github.ref_name == 'main'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/data/official_sources.json docs/data/sec_tickers.json docs/data/liquidity_public.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Refresh official public research data'
+            git push origin HEAD:main
+          fi
