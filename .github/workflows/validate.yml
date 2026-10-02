@@ -16,7 +16,8 @@ jobs:
           python-version: '3.12'
       - name: Compile website and data connectors
         run: |
-          python -m py_compile tools/fetch_public_sources.py tools/fetch_public_liquidity.py tools/stage_data.py \
+          python -m py_compile tools/fetch_public_sources.py tools/fetch_public_liquidity.py \
+            tools/fetch_public_positioning.py tools/fetch_public_news_resilient.py tools/stage_data.py \
             tools/fetch_licensed_etfs.py tools/fetch_licensed_indices.py \
             tools/merge_market_history.py tools/build_market_snapshot.py \
             tools/build_structure_lab.py tools/enrich_cycle_research.py \

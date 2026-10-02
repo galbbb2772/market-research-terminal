@@ -2,11 +2,20 @@ name: Refresh official public sources
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tools/fetch_public_sources.py'
+      - 'tools/fetch_public_liquidity.py'
+      - 'tools/fetch_public_positioning.py'
+      - 'tools/fetch_public_news_resilient.py'
+      - '.github/workflows/probe-public-sources.yml'
   push:
     branches: [main]
     paths:
       - 'tools/fetch_public_sources.py'
       - 'tools/fetch_public_liquidity.py'
+      - 'tools/fetch_public_positioning.py'
+      - 'tools/fetch_public_news_resilient.py'
       - '.github/workflows/probe-public-sources.yml'
   schedule:
     - cron: '35 12 * * *'
@@ -15,13 +24,13 @@ permissions:
   contents: write
 
 concurrency:
-  group: official-public-sources-write
-  cancel-in-progress: false
+  group: official-public-sources-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,15 +39,33 @@ jobs:
         with:
           python-version: '3.12'
       - name: Compile public connectors
-        run: python -m py_compile tools/fetch_public_sources.py tools/fetch_public_liquidity.py
+        run: |
+          python -m py_compile \
+            tools/fetch_public_sources.py \
+            tools/fetch_public_liquidity.py \
+            tools/fetch_public_positioning.py \
+            tools/fetch_public_news_resilient.py
       - name: Fetch official/open sources
         run: |
           set -euo pipefail
-          python tools/fetch_public_sources.py \
-            --output docs/data/official_sources.json \
-            --sec-output docs/data/sec_tickers.json \
-            --require-min-ok 4
+          # GDELT is handled by fetch_public_news_resilient.py below with bounded
+          # timeouts and official RSS fallbacks. Skip the older duplicate GDELT
+          # pass here so a flaky endpoint cannot add several minutes twice.
+          python - <<'PY'
+          import sys
+          import tools.fetch_public_sources as f
+          f.FETCHERS.pop('gdelt', None)
+          sys.argv = [
+              'fetch_public_sources.py',
+              '--output', 'docs/data/official_sources.json',
+              '--sec-output', 'docs/data/sec_tickers.json',
+              '--require-min-ok', '4',
+          ]
+          f.main()
+          PY
           python tools/fetch_public_liquidity.py --output docs/data/liquidity_public.json
+          python tools/fetch_public_positioning.py --output docs/data/positioning_public.json
+          python tools/fetch_public_news_resilient.py --output docs/data/news_public.json
       - name: Print compact source status
         run: |
           python - <<'PY'
@@ -51,13 +78,22 @@ jobs:
           print('LIQUIDITY_RESULT',q.get('ok_count'),'/',q.get('source_count'))
           for k,v in q.get('sources',{}).items():
               print('liquidity:'+k, v.get('status'), v.get('error',''))
+          p=json.load(open('docs/data/positioning_public.json',encoding='utf-8'))
+          print('POSITIONING_RESULT',p.get('ok_count'),'/',p.get('target_count'))
+          for k,v in p.get('targets',{}).items():
+              print('positioning:'+k, v.get('status'), v.get('selected_contract'), v.get('errors',''))
+          n=json.load(open('docs/data/news_public.json',encoding='utf-8'))
+          print('NEWS_RESULT',n.get('ok_count'),'/',n.get('source_count'))
+          for k,v in n.get('sources',{}).items():
+              print('news:'+k, v.get('status'), v.get('error',''))
           PY
       - name: Commit only public static research data
         if: github.ref_name == 'main'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add docs/data/official_sources.json docs/data/liquidity_public.json
+          git add docs/data/official_sources.json docs/data/liquidity_public.json \
+                  docs/data/positioning_public.json docs/data/news_public.json
           if [ -f docs/data/sec_tickers.json ]; then git add docs/data/sec_tickers.json; fi
           if ! git diff --cached --quiet; then
             git commit -m 'Refresh official public research data'
