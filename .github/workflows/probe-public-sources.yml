@@ -48,10 +48,21 @@ jobs:
       - name: Fetch official/open sources
         run: |
           set -euo pipefail
-          python tools/fetch_public_sources.py \
-            --output docs/data/official_sources.json \
-            --sec-output docs/data/sec_tickers.json \
-            --require-min-ok 4
+          # GDELT is handled by fetch_public_news_resilient.py below with bounded
+          # timeouts and official RSS fallbacks. Skip the older duplicate GDELT
+          # pass here so a flaky endpoint cannot add several minutes twice.
+          python - <<'PY'
+          import sys
+          import tools.fetch_public_sources as f
+          f.FETCHERS.pop('gdelt', None)
+          sys.argv = [
+              'fetch_public_sources.py',
+              '--output', 'docs/data/official_sources.json',
+              '--sec-output', 'docs/data/sec_tickers.json',
+              '--require-min-ok', '4',
+          ]
+          f.main()
+          PY
           python tools/fetch_public_liquidity.py --output docs/data/liquidity_public.json
           python tools/fetch_public_positioning.py --output docs/data/positioning_public.json
           python tools/fetch_public_news_resilient.py --output docs/data/news_public.json
