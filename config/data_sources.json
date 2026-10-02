@@ -1,18 +1,26 @@
 {
-  "schema_version":"1.3",
-  "notes":"Current website scope is ETF + major indices only. No individual-stock or delisted-stock market database is required. Public/no-key macro, rates, liquidity, CFTC positioning and public news context are refreshed automatically; exchange/vendor market-price history remains licensing-gated.",
+  "schema_version":"1.4",
+  "notes":"Current website scope is ETF + major indices only. No individual-stock or delisted-stock market database is required. Public/no-key macro, rates, liquidity, CFTC positioning and public news context are automated. Canonical ETF price history has an open-licensed HF Data Library route; proprietary headline indices remain separately licensing-gated.",
   "slots":{
-    "market_history_daily":{
+    "market_history_etfs":{
+      "status":"connector_ready_waiting_for_free_api_key",
+      "provider":"HF Data Library",
+      "scope":"SPY, QQQ, DIA, S&P 500 11 sector ETFs, plus verified optional ETF proxies such as QTEC",
+      "output":"docs/data/market_history.json",
+      "required":"date,open,high,low,close,volume|null,adjusted_close|null,provider_symbol,source_provenance,adjustment,rights_status",
+      "public_rule":"HF Data Library publishes the dataset under CC BY 4.0; output is published only with attribution and the documented March-2022 PiTrading-to-IEX source break preserved.",
+      "credential":"HFDL_API_KEY GitHub Actions secret; provider currently issues free keys that expire every 30 days"
+    },
+    "market_history_headline_indices":{
       "status":"license_blocked_public_site",
       "provider":null,
-      "scope":"SPY, QQQ, DIA, S&P 500, Nasdaq-100, Nasdaq Composite, DJIA, S&P sector ETFs, verified Nasdaq sector trackers, verified Dow Jones U.S. sector indices",
-      "required":"date,open,high,low,close,volume|null,adjusted_close|null,provider_symbol,source_provenance,adjustment,rights_status",
-      "public_rule":"Only verified_publishable data may be written to docs/data/market_history.json",
-      "fallback":"Use the existing personal/local import path for non-display vendor data until a public-display licence is supplied."
+      "scope":"S&P 500, Nasdaq-100, Nasdaq Composite, DJIA proprietary index series",
+      "public_rule":"Do not synthesize or relabel ETF proxies as the proprietary index series. Add only a source whose public-display/static-redistribution rights are verified.",
+      "fallback":"SPY/QQQ/DIA may be displayed only as clearly labelled ETF proxies, not as the indices themselves."
     },
     "market_snapshot":{
-      "status":"waiting_for_licensed_market_history",
-      "provider":null,
+      "status":"ready_after_open_etf_history_refresh",
+      "provider":"derived from verified_publishable ETF market history",
       "required":"id,date,close,return_1d,return_5d,return_20d,volatility_20d,drawdown_from_peak,relative_to_spy_20d,activity_score,range_box_state",
       "public_rule":"Derived only from approved market history or another approved display source"
     },
@@ -23,7 +31,7 @@
     },
     "official_public_bundle":{
       "status":"automated_daily",
-      "provider":"BLS / U.S. Treasury / Federal Reserve Board / NY Fed / World Bank / OECD, with SEC/GDELT attempted fail-soft",
+      "provider":"BLS / U.S. Treasury / Federal Reserve Board / NY Fed / World Bank / OECD, with SEC attempted fail-soft",
       "output":"docs/data/official_sources.json",
       "refresh":"daily GitHub Actions plus manual dispatch",
       "rights":"official/open public data only; source failures remain explicit"
@@ -44,7 +52,7 @@
       "status":"automated_daily_source_weekly_data",
       "provider":"U.S. Commodity Futures Trading Commission Public Reporting Environment",
       "output":"docs/data/positioning_public.json",
-      "coverage":"selected financial futures positioning for major equity-index, U.S. dollar and 10Y Treasury contracts",
+      "coverage":"pinned CFTC contract codes for E-mini S&P 500, Nasdaq Mini, DJIA x $5, Russell E-mini, USD Index and UST 10Y Note",
       "metric":"contract counts and long-minus-short balances; not dollar flows or ETF flows"
     },
     "sec_identifiers":{
@@ -55,10 +63,10 @@
     },
     "news_recent":{
       "status":"automated_daily_with_fallbacks",
-      "provider":"GDELT DOC 2.0 plus Federal Reserve and BLS official RSS",
+      "provider":"GDELT DOC 2.0 plus official Federal Reserve/BLS release feeds where upstream access succeeds",
       "output":"docs/data/news_public.json",
-      "window":"GDELT rolling 3 months; official RSS latest releases",
-      "metric":"GDELT aggregate topic coverage plus official release headlines/links only; no article bodies republished"
+      "window":"GDELT rolling 3 months; official feeds latest releases",
+      "metric":"aggregate topic coverage plus official release headlines/links only; no article bodies republished"
     },
     "news_deep_history":{
       "status":"needs_bulk_or_authenticated_warehouse_route",
