@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fetch no-key U.S. liquidity / policy plumbing data for the public research site.
 
-Sources are official U.S. Treasury / Federal Reserve / New York Fed endpoints.  The
+Sources are official U.S. Treasury / Federal Reserve / New York Fed endpoints. The
 output is descriptive research data only; it does not generate trading signals.
 """
 from __future__ import annotations
@@ -82,7 +82,6 @@ def fetch_tga() -> dict[str, Any]:
                              "open_mn_usd": opening, "close_mn_usd": close})
         if not rows:
             raise ValueError("Treasury DTS returned no usable operating-cash rows")
-        # Prefer the account row explicitly naming the TGA/Federal Reserve account.
         primary = [r for r in rows if "treasury general" in r["account_type"].lower()]
         if not primary:
             primary = [r for r in rows if "federal reserve" in r["account_type"].lower()]
@@ -137,7 +136,6 @@ def fetch_nyfed_rp(url: str, label: str) -> dict[str, Any]:
         return ok("Federal Reserve Bank of New York", url, frequency="operation-day",
                   rows=rows, note=f"{label} operation results from the NY Fed Markets Data API.")
     except Exception as exc:
-        # documented short-window fallback if a large `last/N` request is rejected
         fallback = url.rsplit("/last/", 1)[0] + "/lastTwoWeeks.json"
         try:
             obj = get_json(fallback)
@@ -151,34 +149,45 @@ def fetch_nyfed_rp(url: str, label: str) -> dict[str, Any]:
             return err("Federal Reserve Bank of New York", url, RuntimeError(f"primary={exc}; fallback={exc2}"))
 
 
+def fetch_one_fed_series(series_id: str) -> tuple[list[list[Any]], str]:
+    url = "https://fred.stlouisfed.org/graph/fredgraph.csv?" + urllib.parse.urlencode({"id": series_id})
+    text = request_text(url)
+    reader = csv.DictReader(io.StringIO(text, newline=""))
+    rows: list[list[Any]] = []
+    for row in reader:
+        date = row.get("DATE") or row.get("observation_date")
+        value = number(row.get(series_id))
+        if date and value is not None:
+            rows.append([date, value])
+    return rows, url
+
+
 def fetch_fed_policy_series() -> dict[str, Any]:
-    ids = ",".join(FED_SERIES)
-    url = "https://fred.stlouisfed.org/graph/fredgraph.csv?" + urllib.parse.urlencode({"id": ids})
     try:
-        reader = csv.DictReader(io.StringIO(request_text(url)))
-        store = {sid: [] for sid in FED_SERIES}
-        for row in reader:
-            date = row.get("DATE")
-            if not date:
-                continue
-            for sid in FED_SERIES:
-                v = number(row.get(sid))
-                if v is not None:
-                    store[sid].append([date, v])
         series = {}
+        urls = {}
+        failures = {}
         for sid, (name, unit, freq) in FED_SERIES.items():
-            if store[sid]:
-                series[sid] = {"name": name, "unit": unit, "frequency": freq,
-                               "observations": store[sid]}
+            try:
+                observations, url = fetch_one_fed_series(sid)
+                urls[sid] = url
+                if observations:
+                    series[sid] = {"name": name, "unit": unit, "frequency": freq,
+                                   "observations": observations}
+                else:
+                    failures[sid] = "empty"
+            except Exception as exc:
+                failures[sid] = f"{type(exc).__name__}: {str(exc)[:160]}"
         if not series:
             raise ValueError("No Federal Reserve policy series parsed")
-        return ok("Federal Reserve public series distributed by FRED", url,
+        return ok("Federal Reserve public series distributed by FRED",
+                  "https://fred.stlouisfed.org/",
                   point_in_time=False,
                   history_type="current/revised official Federal Reserve series, not vintage",
-                  series=series,
+                  series=series, source_urls=urls, failures=failures,
                   rights_note="Only Federal Reserve-published series are requested here; third-party licensed FRED series are intentionally excluded.")
     except Exception as exc:
-        return err("Federal Reserve public series distributed by FRED", url, exc)
+        return err("Federal Reserve public series distributed by FRED", "https://fred.stlouisfed.org/", exc)
 
 
 def main():
