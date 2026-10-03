@@ -9,7 +9,9 @@ Public/static outputs in this directory are split by rights and purpose:
 - `sec_tickers.json`: optional SEC ticker/CIK/exchange mapping when the SEC endpoint permits access. Hosted GitHub runners currently receive HTTP 403, so absence of this file must not break refreshes; it is not required for the present ETF/index scope.
 - `news_history.json`: legacy derived research archive copied from the prior public Market V2 preview; keep its provenance separate from the new live public-news output.
 - `market_history.json`: canonical ETF daily history can be generated from HF Data Library after `HFDL_API_KEY` is configured. The provider publishes the dataset under CC BY 4.0. The JSON preserves the March-2022 PiTrading-to-IEX-only source break and required attribution. Proprietary headline indices are not fabricated.
-- `structure_lab.json` and `market_snapshot.json`: derived from `market_history.json` only when the upstream history is marked `rights_status=verified_publishable`.
+- `structure_lab.json` and `market_snapshot.json`: derived from `market_history.json` only when the upstream history is marked `rights_status=verified_publishable`. The public structure build uses the same `RANGE-TEMPLATE-V2` contract as Stock Terminal: small ranges use a 45-session observation window with roughly 30-session minimum structure, large ranges use 120/80, both sides require separated repeat confirmation, trend-like pauses are filtered, breakouts require multiple closes, and nearby overlapping ranges are merged/pruned before display.
+
+Time-series pages use the shared bounded chart template: zoom cannot exceed the real data history or shrink below the minimum visible-point floor; mouse/touch drag pans inside those bounds and two-pointer touch gestures zoom around the gesture center.
 
 The public attribution page is `../open-data-attribution.html`.
 
