@@ -2,13 +2,15 @@
 """Fetch public news/event context without user API keys.
 
 Primary source: GDELT DOC 2.0 aggregate timelines. If that service is unavailable,
-we retain official Federal Reserve, BLS and BEA release feeds as policy/economic
-release context. No article bodies are republished.
+we retain official Federal Reserve, BLS and BEA release context. BLS RSS is preferred;
+its official iCalendar schedule is used when hosted runners receive 403 from the RSS
+endpoint. No article bodies are republished.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import time
 import urllib.parse
 import urllib.request
@@ -22,6 +24,7 @@ NOW = lambda: datetime.now(timezone.utc)
 GDELT = "https://api.gdeltproject.org/api/v2/doc/doc"
 FED_RSS = "https://www.federalreserve.gov/feeds/press_all.xml"
 BLS_RSS = "https://www.bls.gov/feed/bls_latest.rss"
+BLS_ICS = "https://www.bls.gov/schedule/news_release/bls.ics"
 BEA_RSS = "https://apps.bea.gov/rss/rss.xml"
 
 TOPICS = {
@@ -152,6 +155,97 @@ def fetch_feed(name: str, url: str) -> dict[str, Any]:
                 "error": f"{type(exc).__name__}: {str(exc)[:240]}"}
 
 
+def _unfold_ics(text_value: str) -> list[str]:
+    """RFC 5545 line unfolding, sufficient for the BLS public release calendar."""
+    raw_lines = text_value.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    lines: list[str] = []
+    for line in raw_lines:
+        if (line.startswith(" ") or line.startswith("\t")) and lines:
+            lines[-1] += line[1:]
+        else:
+            lines.append(line)
+    return lines
+
+
+def _ics_value(line: str) -> tuple[str, str] | None:
+    if ":" not in line:
+        return None
+    key, value = line.split(":", 1)
+    return key.split(";", 1)[0].upper(), value.strip()
+
+
+def parse_bls_ics(raw: bytes) -> list[dict[str, Any]]:
+    text_value = raw.decode("utf-8-sig", errors="replace")
+    events: list[dict[str, str]] = []
+    current: dict[str, str] | None = None
+    for line in _unfold_ics(text_value):
+        token = line.strip()
+        if token == "BEGIN:VEVENT":
+            current = {}
+            continue
+        if token == "END:VEVENT":
+            if current:
+                events.append(current)
+            current = None
+            continue
+        if current is None:
+            continue
+        parsed = _ics_value(line)
+        if parsed:
+            key, value = parsed
+            current[key] = value
+
+    out: list[dict[str, Any]] = []
+    for event in events:
+        title = event.get("SUMMARY")
+        start = event.get("DTSTART")
+        if not title or not start:
+            continue
+        digits = re.sub(r"[^0-9]", "", start)
+        day = None
+        if len(digits) >= 8:
+            day = f"{digits[:4]}-{digits[4:6]}-{digits[6:8]}"
+        out.append({
+            "title": title.replace("\\,", ",")[:300],
+            "scheduled": start,
+            "date": day,
+            "url": event.get("URL"),
+        })
+    out.sort(key=lambda x: (x.get("date") or "", x.get("scheduled") or ""))
+    return out[:150]
+
+
+def fetch_bls() -> dict[str, Any]:
+    """Prefer BLS latest RSS; fall back to the official release calendar."""
+    rss = fetch_feed("U.S. Bureau of Labor Statistics latest releases", BLS_RSS)
+    if rss.get("status") == "ok":
+        rss["mode"] = "latest_release_rss"
+        return rss
+    rss_error = rss.get("error")
+    try:
+        rows = parse_bls_ics(request(BLS_ICS, timeout=20, attempts=2,
+                                     accept="text/calendar, text/plain, */*"))
+        if not rows:
+            raise ValueError("BLS calendar contained no parsable VEVENT records")
+        return {
+            "status": "ok",
+            "provider": "U.S. Bureau of Labor Statistics release calendar",
+            "source_url": BLS_ICS,
+            "mode": "official_release_calendar_fallback",
+            "entries": rows,
+            "rss_error": rss_error,
+            "note": "Calendar fallback provides scheduled release context when the BLS RSS endpoint blocks the hosted runner; it is not a headline archive.",
+        }
+    except Exception as exc:
+        return {
+            "status": "error",
+            "provider": "U.S. Bureau of Labor Statistics",
+            "source_url": BLS_RSS,
+            "fallback_source_url": BLS_ICS,
+            "error": f"RSS={rss_error}; ICS={type(exc).__name__}: {str(exc)[:180]}",
+        }
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--output", default="docs/data/news_public.json")
@@ -160,7 +254,7 @@ def main() -> None:
     sources = {
         "gdelt": fetch_gdelt(),
         "federal_reserve_press": fetch_feed("Federal Reserve Board press releases", FED_RSS),
-        "bls_latest": fetch_feed("U.S. Bureau of Labor Statistics", BLS_RSS),
+        "bls": fetch_bls(),
         "bea_releases": fetch_feed("U.S. Bureau of Economic Analysis news releases", BEA_RSS),
     }
     ok_count = sum(1 for x in sources.values() if x.get("status") == "ok")
@@ -173,6 +267,7 @@ def main() -> None:
         "notes": [
             "No API key is required.",
             "Official feed output stores only headline, link and publication time; article bodies are not copied.",
+            "If BLS RSS is blocked, the official BLS iCalendar release schedule is retained as scheduled-release context, not a headline archive.",
             "GDELT values measure coverage volume/share, not market sentiment by themselves.",
             "BLS and GDELT are fail-soft because hosted runners may be rate-limited or blocked; Federal Reserve and BEA feeds provide independent official fallbacks.",
         ],
