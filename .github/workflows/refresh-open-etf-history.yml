@@ -8,8 +8,10 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/refresh-open-etf-history.yml'
+      - 'docs/data/market_universe.json'
       - 'tools/fetch_open_etfs_hfdl.py'
       - 'tools/fetch_open_etfs_hfdl_compat.py'
+      - 'tools/fetch_open_etfs_hfdl_publish.py'
 
 permissions:
   contents: write
@@ -47,8 +49,9 @@ jobs:
         if: steps.gate.outputs.enabled == 'true'
         run: |
           python -m py_compile tools/fetch_open_etfs_hfdl.py tools/fetch_open_etfs_hfdl_compat.py \
-            tools/build_structure_lab.py tools/enrich_cycle_research.py \
-            tools/validate_cycle_research.py tools/build_market_snapshot.py
+            tools/fetch_open_etfs_hfdl_publish.py tools/build_structure_lab.py \
+            tools/enrich_cycle_research.py tools/validate_cycle_research.py \
+            tools/build_market_snapshot.py
           python -m unittest tests.test_open_hfdl_etfs -v
 
       - name: Install parquet fallback dependencies
@@ -61,7 +64,7 @@ jobs:
           HFDL_API_KEY: ${{ secrets.HFDL_API_KEY }}
         run: |
           set -euo pipefail
-          python tools/fetch_open_etfs_hfdl_compat.py \
+          python tools/fetch_open_etfs_hfdl_publish.py \
             --start 2019-01-01 \
             --output docs/data/market_history.json \
             --publish
@@ -90,7 +93,7 @@ jobs:
           python - <<'PY'
           import json
           h=json.load(open('docs/data/market_history.json',encoding='utf-8'))
-          required={'SPY','QQQ','DIA','XLB','XLC','XLE','XLF','XLI','XLK','XLP','XLRE','XLU','XLV','XLY'}
+          required={'SPY','QQQ','DIA','XLB','XLC','XLE','XLF','XLI','XLK','XLP','XLU','XLV','XLY'}
           present=set(h.get('instruments',{}))
           missing=sorted(required-present)
           assert h.get('rights_status')=='verified_publishable', h.get('rights_status')
@@ -98,8 +101,9 @@ jobs:
           attr=h.get('attribution') or {}
           assert 'CC BY 4.0' in (attr.get('hf_license') or '')
           assert 'Data provided for free by IEX' in (attr.get('iex_notice') or '')
+          optional=h.get('failed_optional_instruments',{})
           print('OPEN_ETF_RESULT',len(present),'symbols',h.get('provider'))
-          print('OPTIONAL_FAILURES',h.get('failed_optional_instruments',{}))
+          print('OPTIONAL_FAILURES',optional)
           PY
 
       - name: Commit open-licensed website market data
