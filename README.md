@@ -1,5 +1,7 @@
 # Market Research Terminal
 
+**网站：** https://galbbb2772.github.io/market-research-terminal/
+
 独立的 **美国大盘 / 行业结构 / 宏观 / 新闻 / 历史结构** 可视化网站。
 
 当前正式范围已经固定为：**ETF + 主要指数**。本仓库不建设全美股个股数据库，不需要退市股历史，不包含策略回测、Sharpe、OOS、实盘交易或 Frozen V4 策略代码。
