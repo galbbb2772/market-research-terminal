@@ -2,7 +2,7 @@
 """Fetch public news/event context without user API keys.
 
 Primary source: GDELT DOC 2.0 aggregate timelines. If that service is unavailable,
-we still retain official Federal Reserve and BLS RSS headlines as policy/economic
+we retain official Federal Reserve, BLS and BEA release feeds as policy/economic
 release context. No article bodies are republished.
 """
 from __future__ import annotations
@@ -22,6 +22,7 @@ NOW = lambda: datetime.now(timezone.utc)
 GDELT = "https://api.gdeltproject.org/api/v2/doc/doc"
 FED_RSS = "https://www.federalreserve.gov/feeds/press_all.xml"
 BLS_RSS = "https://www.bls.gov/feed/bls_latest.rss"
+BEA_RSS = "https://apps.bea.gov/rss/rss.xml"
 
 TOPICS = {
     "geopolitical": ["war", "sanctions"],
@@ -46,7 +47,7 @@ def request(url: str, *, timeout: int = 25, accept: str = "*/*", attempts: int =
 
 
 def gdelt_one(query: str) -> tuple[list[dict[str, Any]], str]:
-    """Try GDELT quickly; RSS is the reliability fallback so GDELT must not stall CI."""
+    """Try GDELT quickly; official feeds are the reliability fallback."""
     errors = []
     for mode in ("timelinevolraw", "timelinevol"):
         params = urllib.parse.urlencode({
@@ -107,7 +108,7 @@ def fetch_gdelt() -> dict[str, Any]:
         "window": "rolling 3 months",
         "series": series,
         "failures": failures,
-        "note": "Aggregate coverage proxy only; not a validated sentiment or trading signal. GDELT uses a short fail-fast timeout because official RSS is the reliability fallback.",
+        "note": "Aggregate coverage proxy only; not a validated sentiment or trading signal. GDELT uses a short fail-fast timeout because official feeds are the reliability fallback.",
     }
 
 
@@ -160,6 +161,7 @@ def main() -> None:
         "gdelt": fetch_gdelt(),
         "federal_reserve_press": fetch_feed("Federal Reserve Board press releases", FED_RSS),
         "bls_latest": fetch_feed("U.S. Bureau of Labor Statistics", BLS_RSS),
+        "bea_releases": fetch_feed("U.S. Bureau of Economic Analysis news releases", BEA_RSS),
     }
     ok_count = sum(1 for x in sources.values() if x.get("status") == "ok")
     payload = {
@@ -170,8 +172,9 @@ def main() -> None:
         "sources": sources,
         "notes": [
             "No API key is required.",
-            "RSS output stores only headline, link and publication time; article bodies are not copied.",
+            "Official feed output stores only headline, link and publication time; article bodies are not copied.",
             "GDELT values measure coverage volume/share, not market sentiment by themselves.",
+            "BLS and GDELT are fail-soft because hosted runners may be rate-limited or blocked; Federal Reserve and BEA feeds provide independent official fallbacks.",
         ],
     }
     out = Path(args.output)
