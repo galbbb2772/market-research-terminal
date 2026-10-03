@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Compatibility/diagnostic launcher for the HF Data Library ETF adapter.
 
-The preferred path asks HF Data Library for a signed daily-CSV URL. If that
-provider path returns 404 after successful authentication, fall back to the
-canonical /bars/{ticker} 1-minute parquet endpoint and aggregate those clean
-bars to daily OHLCV locally. The fallback preserves the same provider, license,
-source-regime notes and publication gates; it does not substitute another feed.
+The preferred path asks HF Data Library for a signed daily-CSV URL. If either
+the signed-token request or the resulting download path returns 404, fall back
+to the canonical /bars/{ticker} 1-minute parquet endpoint and aggregate those
+clean bars to daily OHLCV locally. The fallback preserves the same provider,
+license, source-regime notes and publication gates; it does not substitute
+another feed.
 """
 from __future__ import annotations
 
@@ -191,7 +192,19 @@ def _fetch_1min_parquet_daily(symbol: str, start: str, end: str, api_key: str) -
 
 
 def fetch_symbol_compat(symbol: str, start: str, end: str, api_key: str) -> dict[str, Any]:
-    signed = signed_csv_url_compat(symbol, api_key)
+    try:
+        signed = signed_csv_url_compat(symbol, api_key)
+    except urllib.error.HTTPError as exc:
+        if exc.code != 404:
+            raise
+        body = _safe_error_body(exc)
+        print(
+            f"{symbol}: signed-token endpoint returned HTTP 404 ({body or 'no body'}); "
+            "falling back to canonical 1-minute parquet",
+            flush=True,
+        )
+        return _fetch_1min_parquet_daily(symbol, start, end, api_key)
+
     try:
         raw = base._request(signed, timeout=90)
     except urllib.error.HTTPError as exc:
