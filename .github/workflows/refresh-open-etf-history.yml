@@ -74,7 +74,7 @@ jobs:
         if: steps.gate.outputs.enabled == 'true'
         run: |
           set -euo pipefail
-          python tools/build_structure_lab_v2.py \
+          python -m tools.build_structure_lab_v2 \
             --input docs/data/market_history.json \
             --output docs/data/structure_lab.json \
             --publish
