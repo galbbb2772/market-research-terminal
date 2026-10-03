@@ -21,7 +21,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,6 +50,10 @@ jobs:
             tools/build_structure_lab.py tools/enrich_cycle_research.py \
             tools/validate_cycle_research.py tools/build_market_snapshot.py
           python -m unittest tests.test_open_hfdl_etfs -v
+
+      - name: Install parquet fallback dependencies
+        if: steps.gate.outputs.enabled == 'true'
+        run: python -m pip install --quiet --disable-pip-version-check pandas pyarrow
 
       - name: Fetch redistributable canonical ETF daily history
         if: steps.gate.outputs.enabled == 'true'
