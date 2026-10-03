@@ -1,3 +1,4 @@
+(()=>{'use strict';if(document.querySelector('script[data-mrt-chart-template-v2]'))return;let s=document.createElement('script');s.src='./chart-template-v2.js?v=20261003-v2';s.dataset.mrtChartTemplateV2='1';s.async=false;document.head.appendChild(s)})();
 (()=>{'use strict';
 const byId=id=>document.getElementById(id), clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 function addTopbar(){if(document.querySelector('.rt-topbar'))return;let main=document.querySelector('main');if(!main)return;let bar=document.createElement('div');bar.className='rt-topbar';bar.innerHTML='<div class="rt-title">MARKET STRUCTURE · RESEARCH TERMINAL</div><div class="rt-links"><a href="./research-hub.html">研究总览</a><a href="./structure-lab.html#boxes">箱体</a><a href="./structure-lab.html#sector">行业</a><a href="./structure-lab.html#macro">宏观</a><a href="./cycle-lab.html">周期</a></div>';main.prepend(bar)}
