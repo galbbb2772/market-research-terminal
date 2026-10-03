@@ -8,6 +8,11 @@ on:
       - 'config/**'
       - 'tests/**'
       - '.github/workflows/deploy.yml'
+  workflow_run:
+    workflows:
+      - 'Refresh open ETF history'
+      - 'Refresh official public sources'
+    types: [completed]
   schedule:
     - cron: '17 14 * * *'
   workflow_dispatch:
@@ -20,6 +25,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   deploy:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
