@@ -1,7 +1,7 @@
 {
   "schema":"MARKET-UNIVERSE-V1",
   "scope":"ETF_AND_MAJOR_INDEX_ONLY",
-  "updated_at":"2026-09-30",
+  "updated_at":"2026-10-03",
   "exclude":{"individual_stocks":true,"delisted_stocks":true,"stock_constituent_history":true,"strategy_backtests":true},
   "benchmarks":[
     {"id":"SPY","type":"etf","name":"SPDR S&P 500 ETF Trust","role":"S&P 500 ETF proxy"},
@@ -23,7 +23,7 @@
       {"id":"XLI","sector":"Industrials","name":"Industrial Select Sector SPDR Fund","kind":"ETF"},
       {"id":"XLK","sector":"Information Technology","name":"Technology Select Sector SPDR Fund","kind":"ETF"},
       {"id":"XLP","sector":"Consumer Staples","name":"Consumer Staples Select Sector SPDR Fund","kind":"ETF"},
-      {"id":"XLRE","sector":"Real Estate","name":"Real Estate Select Sector SPDR Fund","kind":"ETF"},
+      {"id":"XLRE","sector":"Real Estate","name":"Real Estate Select Sector SPDR Fund","kind":"ETF","hfdl_required":false,"hfdl_status":"not_in_clean_dataset_as_of_2026-10-03"},
       {"id":"XLU","sector":"Utilities","name":"Utilities Select Sector SPDR Fund","kind":"ETF"},
       {"id":"XLV","sector":"Health Care","name":"Health Care Select Sector SPDR Fund","kind":"ETF"},
       {"id":"XLY","sector":"Consumer Discretionary","name":"Consumer Discretionary Select Sector SPDR Fund","kind":"ETF"}
@@ -53,5 +53,5 @@
     ]}
   },
   "market_snapshot_contract":{"optional_file":"market_snapshot.json","fields":["date","id","close","return_1d","return_5d","return_20d","volatility_20d","drawdown_from_peak","relative_to_spy_20d","activity_score","range_box_state"]},
-  "notes":["No individual-stock or delisted-stock history belongs in this website universe.","QQQ tracks Nasdaq-100; Nasdaq Composite is separate.","Do not fabricate Nasdaq or Dow sector trackers when an exact mapping has not been verified."]
+  "notes":["No individual-stock or delisted-stock history belongs in this website universe.","QQQ tracks Nasdaq-100; Nasdaq Composite is separate.","Do not fabricate Nasdaq or Dow sector trackers when an exact mapping has not been verified.","HF Data Library clean currently does not contain XLRE; keep the canonical Real Estate ETF in the universe but do not block publication of otherwise available open-licensed ETF history."]
 }
