@@ -40,7 +40,7 @@ jobs:
       - name: Validate open-data adapter and research builders
         if: steps.gate.outputs.enabled == 'true'
         run: |
-          python -m py_compile tools/fetch_open_etfs_hfdl.py \
+          python -m py_compile tools/fetch_open_etfs_hfdl.py tools/fetch_open_etfs_hfdl_compat.py \
             tools/build_structure_lab.py tools/enrich_cycle_research.py \
             tools/validate_cycle_research.py tools/build_market_snapshot.py
           python -m unittest tests.test_open_hfdl_etfs -v
@@ -51,7 +51,7 @@ jobs:
           HFDL_API_KEY: ${{ secrets.HFDL_API_KEY }}
         run: |
           set -euo pipefail
-          python tools/fetch_open_etfs_hfdl.py \
+          python tools/fetch_open_etfs_hfdl_compat.py \
             --start 2019-01-01 \
             --output docs/data/market_history.json \
             --publish
