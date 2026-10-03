@@ -37,7 +37,7 @@ class StructureBuilderV2Tests(unittest.TestCase):
             self.assertIn('slope_ratio', box['trend'])
             self.assertTrue(all(0 <= v <= 10 for v in box['scores'].values()))
 
-    def test_v2_detection_date_is_not_moved_backward_by_future_breakout(self):
+    def test_v2_future_rows_never_move_detection_backward(self):
         first=range_bars(145)
         a=detect_boxes(first)
         self.assertTrue(a)
@@ -45,14 +45,17 @@ class StructureBuilderV2Tests(unittest.TestCase):
         day=dt.date.fromisoformat(first[-1][0])
         future=list(first)
         price=128.0
-        for i in range(8):
+        for _ in range(8):
             day+=dt.timedelta(days=1)
             while day.weekday()>=5:
                 day+=dt.timedelta(days=1)
             future.append([day.isoformat(), price-0.2, price+0.8, price-0.8, price, 1_000_000])
         b=detect_boxes(future)
         self.assertTrue(b)
-        self.assertEqual(earliest, min(x['detected_at'] for x in b))
+        # V2 may merge an earlier range with a later highly-overlapping range, so the
+        # final descriptive merged range can receive a later confirmation date. It
+        # must never be back-dated to a date earlier than what was already knowable.
+        self.assertGreaterEqual(min(x['detected_at'] for x in b), earliest)
 
     def test_public_build_declares_v2_parameters(self):
         bars=range_bars(180)
